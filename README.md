@@ -19,4 +19,95 @@ test/e2e                          跨服务端到端测试
 - Go 标识符、Proto/JSON 字段、环境变量和错误码保持规范英文命名。
 - 生成代码和第三方代码不手工修改注释。
 
-当前目录只是开发骨架；实现顺序和验收标准见外层 `方案文档/陪玩下单Agent_MVP_具体实施方案_含MongoDB_Redis_Ark.md`。
+## 已实现链路
+
+```text
+Chat UI → HTTP POST + SSE → Eino ChatModelAgent → Ark LLM 自主 Tool Calling
+→ Go Tool → gRPC → Mock Business Service → MongoDB
+→ Draft Preview → 用户明确确认 → Mock Order
+```
+
+Redis 保存完整 User / Assistant ToolCall / ToolResult / Assistant Final 消息并刷新 24 小时 TTL；MongoDB 保存画像、陪玩、历史订单、Draft 和 Order。
+
+## 前置要求
+
+- Go 1.25
+- MongoDB：`127.0.0.1:27017`
+- Redis：`127.0.0.1:6379`
+- 已开通的火山方舟模型与 API Key
+
+默认数据库固定为 `companion_agent_mvp`，Redis Key 前缀固定为 `companion-agent:mvp:`。`seed --reset` 只删除这两个范围，不执行 `FLUSHDB`。
+
+## 从干净环境启动
+
+终端一，在 Mock Business Module 中恢复 Demo 数据并启动 gRPC：
+
+```bash
+cd services/mock-business-service
+go run ./cmd/seed --reset
+go run ./cmd/server
+```
+
+终端二，只在当前进程环境注入 Ark 凭证并启动 Agent：
+
+```bash
+cd services/companion-agent-service
+export ARK_API_KEY="<从火山方舟控制台复制后仅注入当前终端>"
+export ARK_MODEL_ID="doubao-seed-2-1-turbo-260628"
+go run ./cmd/ark-smoke
+go run ./cmd/server
+```
+
+打开 [http://127.0.0.1:8080/](http://127.0.0.1:8080/)，使用 `10001`、`10002`、`10003` 可演示不同画像推荐。
+
+健康检查：
+
+```bash
+curl http://127.0.0.1:8080/healthz
+curl http://127.0.0.1:8080/readyz
+```
+
+## 环境变量
+
+| 变量 | 默认值 | 归属 |
+|---|---|---|
+| `ARK_API_KEY` | 无，必填 | Agent |
+| `ARK_MODEL_ID` | 无，必填 | Agent |
+| `ARK_BASE_URL` | `https://ark.cn-beijing.volces.com/api/v3` | Agent |
+| `LLM_MODEL_ALIAS` | `doubao-seed-2.1-turbo` | Agent Trace |
+| `LLM_MAX_TOKENS` | `2048` | Agent |
+| `LLM_TIMEOUT` | `30s` | Agent |
+| `LLM_RETRY_TIMES` | `1` | Agent |
+| `AGENT_MAX_ITERATIONS` | `6` | Agent |
+| `AGENT_HTTP_ADDR` | `:8080` | Agent |
+| `BUSINESS_GRPC_ADDR` | Agent 侧 `127.0.0.1:9090`，Business 侧 `:9090` | 两服务 |
+| `MONGO_URI` | `mongodb://127.0.0.1:27017` | Business |
+| `MONGO_DATABASE` | `companion_agent_mvp` | Business |
+| `DRAFT_TTL` | `15m` | Business |
+| `REDIS_ADDR` | `127.0.0.1:6379` | Agent / Seed Reset |
+| `REDIS_DB` | `0` | Agent / Seed Reset |
+| `REDIS_KEY_PREFIX` | `companion-agent:mvp:` | Agent / Seed Reset |
+| `CONVERSATION_TTL` | `24h` | Agent |
+
+## 测试
+
+每个 Module 可脱离 `go.work` 独立验证：
+
+```bash
+cd contracts/companion-business && GOWORK=off go test ./...
+cd services/mock-business-service && GOWORK=off go test ./... && GOWORK=off go test -race ./...
+cd services/companion-agent-service && GOWORK=off go test ./... && GOWORK=off go test -race ./...
+```
+
+两个服务启动且执行干净 Seed 后，运行真实黑盒 E2E：
+
+```bash
+cd test/e2e
+E2E_BASE_URL=http://127.0.0.1:8080 go test -tags=integration -count=1 -v
+```
+
+E2E 会真实访问 Ark，并在 MongoDB 创建可重置的 Draft/Order。默认单元测试不访问外部模型。
+
+## 安全说明
+
+项目不读取 `.env`，也不包含 API Key 默认值。API Key 不写入代码、配置、README、MongoDB、Redis、Trace、测试快照或前端；日志只记录安全模型别名、RPC 名称与耗时。
