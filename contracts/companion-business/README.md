@@ -1,3 +1,12 @@
-# companion-business contract
+# Companion Business Contract
 
-保存 `companion_business.proto` 及生成后的 gRPC Go 代码。这是两个服务唯一允许共享的代码模块，不放置 Business Rule、Repository 或 Agent 逻辑。
+本模块是 `companion-agent-service` 与 `mock-business-service` 唯一共享的代码边界，定义 5 个一元 gRPC RPC、业务实体和结构化业务错误，不放置业务规则、Repository 或 Agent 逻辑。
+
+重新生成代码：
+
+```bash
+protoc -I proto \
+  --go_out=. --go_opt=module=companion-agent/contracts/companion-business \
+  --go-grpc_out=. --go-grpc_opt=module=companion-agent/contracts/companion-business \
+  proto/companion_business.proto
+```
