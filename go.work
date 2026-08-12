@@ -5,4 +5,5 @@ use (
 	./experiments/profile-extraction
 	./services/companion-agent-service
 	./services/mock-business-service
+	./test/e2e
 )
