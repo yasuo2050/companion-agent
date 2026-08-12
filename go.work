@@ -1,0 +1,8 @@
+go 1.25.0
+
+use (
+	./contracts/companion-business
+	./experiments/profile-extraction
+	./services/companion-agent-service
+	./services/mock-business-service
+)
