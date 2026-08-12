@@ -4,6 +4,7 @@ package business
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	businessv1 "companion-agent/contracts/companion-business/gen"
@@ -49,26 +50,46 @@ func (c *Client) Ready(ctx context.Context) error {
 	return nil
 }
 func (c *Client) GetUserProfile(ctx context.Context, user string) (*businessv1.GetUserProfileResponse, error) {
+	started := time.Now()
+	defer func() {
+		slog.Info("业务 RPC 完成", "rpc", "GetUserProfile", "rpc_duration_ms", time.Since(started).Milliseconds())
+	}()
 	call, cancel := c.withTimeout(ctx)
 	defer cancel()
 	return c.api.GetUserProfile(call, &businessv1.GetUserProfileRequest{UserId: user})
 }
 func (c *Client) GetRecentOrders(ctx context.Context, request *businessv1.GetRecentOrdersRequest) (*businessv1.GetRecentOrdersResponse, error) {
+	started := time.Now()
+	defer func() {
+		slog.Info("业务 RPC 完成", "rpc", "GetRecentOrders", "rpc_duration_ms", time.Since(started).Milliseconds())
+	}()
 	call, cancel := c.withTimeout(ctx)
 	defer cancel()
 	return c.api.GetRecentOrders(call, request)
 }
 func (c *Client) SearchCompanions(ctx context.Context, request *businessv1.SearchCompanionsRequest) (*businessv1.SearchCompanionsResponse, error) {
+	started := time.Now()
+	defer func() {
+		slog.Info("业务 RPC 完成", "rpc", "SearchCompanions", "rpc_duration_ms", time.Since(started).Milliseconds())
+	}()
 	call, cancel := c.withTimeout(ctx)
 	defer cancel()
 	return c.api.SearchCompanions(call, request)
 }
 func (c *Client) CreateOrderDraft(ctx context.Context, request *businessv1.CreateOrderDraftRequest) (*businessv1.CreateOrderDraftResponse, error) {
+	started := time.Now()
+	defer func() {
+		slog.Info("业务 RPC 完成", "rpc", "CreateOrderDraft", "rpc_duration_ms", time.Since(started).Milliseconds())
+	}()
 	call, cancel := c.withTimeout(ctx)
 	defer cancel()
 	return c.api.CreateOrderDraft(call, request)
 }
 func (c *Client) ConfirmOrder(ctx context.Context, request *businessv1.ConfirmOrderRequest) (*businessv1.ConfirmOrderResponse, error) {
+	started := time.Now()
+	defer func() {
+		slog.Info("业务 RPC 完成", "rpc", "ConfirmOrder", "rpc_duration_ms", time.Since(started).Milliseconds())
+	}()
 	call, cancel := c.withTimeout(ctx)
 	defer cancel()
 	return c.api.ConfirmOrder(call, request)

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -56,6 +57,7 @@ func (h *HTTP) ready(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
+	started := time.Now()
 	var request ChatRequest
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&request); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"code": "INVALID_REQUEST", "message": "请求格式无效"})
@@ -82,6 +84,8 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Accel-Buffering", "no")
 	requestID := newRequestID()
 	sendSSE(w, flusher, "turn_started", map[string]any{"request_id": requestID, "conversation_id": request.ConversationID})
+	ttfe := time.Since(started)
+	var ttts, ttft time.Duration
 	value, err := h.conversations.Load(r.Context(), request.UserID, request.ConversationID)
 	if err != nil {
 		code := "CONVERSATION_LOAD_FAILED"
@@ -97,18 +101,25 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 	userMessage := schema.UserMessage(request.Message)
 	history = append(history, userMessage)
 	firstDelta := false
-	outputs, runErr := h.runner.Run(r.Context(), request.UserID, request.ConversationID, history, func(event agent.Event) {
+	outputs, runErr := h.runner.Run(r.Context(), requestID, request.UserID, request.ConversationID, history, func(event agent.Event) {
 		switch event.Type {
 		case "status":
+			if ttts == 0 {
+				ttts = time.Since(started)
+			}
 			sendSSE(w, flusher, "status", map[string]any{"request_id": requestID, "tool_name": event.ToolName, "message": toolStatus(event.ToolName)})
 		case "delta":
 			if event.Content != "" {
+				if ttft == 0 {
+					ttft = time.Since(started)
+				}
 				firstDelta = true
 				sendSSE(w, flusher, "delta", map[string]any{"request_id": requestID, "content": event.Content})
 			}
 		}
 	})
 	if runErr != nil {
+		slog.Error("Agent 运行失败", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "code", agentErrorCode(runErr), "error", runErr)
 		sendSSE(w, flusher, "error", map[string]any{"request_id": requestID, "code": agentErrorCode(runErr), "message": "Agent 暂时无法完成本次请求，请稍后重试"})
 		return
 	}
@@ -129,6 +140,7 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendSSE(w, flusher, "done", map[string]any{"request_id": requestID})
+	slog.Info("Agent 延迟指标", "request_id", requestID, "conversation_id", request.ConversationID, "ttfe_ms", ttfe.Milliseconds(), "ttts_ms", durationMillis(ttts), "ttft_ms", durationMillis(ttft), "total_ms", time.Since(started).Milliseconds())
 }
 func sendSSE(w http.ResponseWriter, flusher http.Flusher, event string, data any) {
 	raw, _ := json.Marshal(data)
@@ -157,4 +169,10 @@ func newRequestID() string {
 	value := make([]byte, 8)
 	_, _ = rand.Read(value)
 	return "r" + hex.EncodeToString(value)
+}
+func durationMillis(value time.Duration) int64 {
+	if value == 0 {
+		return -1
+	}
+	return value.Milliseconds()
 }

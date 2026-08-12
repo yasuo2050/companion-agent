@@ -39,9 +39,22 @@ type confirmInput struct {
 	DraftID string `json:"draft_id" jsonschema:"required" jsonschema_description:"当前 Preview 对应的 active Draft ID"`
 }
 
+// EventObserver 接收真实 Tool 执行阶段，用于 SSE 状态和 Trace。
+type EventObserver func(toolName, phase string, startedAt time.Time)
+
 // Build 为单次请求创建带服务端身份上下文的工具集合。
-func Build(client *businessclient.Client, userID, conversationID string) ([]tool.BaseTool, error) {
+func Build(client *businessclient.Client, userID, conversationID string, observers ...EventObserver) ([]tool.BaseTool, error) {
+	observe := func(name, phase string, started time.Time) {
+		for _, observer := range observers {
+			if observer != nil {
+				observer(name, phase, started)
+			}
+		}
+	}
 	recent, err := utils.InferTool("get_recent_orders", "查询当前用户真实历史订单；出现上次、之前、还是那个等指代时使用", func(ctx context.Context, in recentInput) (map[string]any, error) {
+		started := time.Now()
+		observe("get_recent_orders", "started", started)
+		defer observe("get_recent_orders", "completed", started)
 		response, callErr := client.GetRecentOrders(ctx, &businessv1.GetRecentOrdersRequest{UserId: userID, Limit: in.Limit})
 		return encode(response, callErr)
 	})
@@ -49,6 +62,9 @@ func Build(client *businessclient.Client, userID, conversationID string) ([]tool
 		return nil, err
 	}
 	search, err := utils.InferTool("search_companions", "查询满足当前硬条件的真实陪玩候选；preferred_tags 只计算匹配，不过滤或重排", func(ctx context.Context, in searchInput) (map[string]any, error) {
+		started := time.Now()
+		observe("search_companions", "started", started)
+		defer observe("search_companions", "completed", started)
 		request := &businessv1.SearchCompanionsRequest{CompanionId: in.CompanionID, GameId: in.GameID, Gender: in.Gender, MaxPricePerHour: in.MaxPricePerHour, DurationMinutes: in.DurationMinutes, PreferredTags: in.PreferredTags, Limit: in.Limit}
 		if in.StartTime != "" {
 			parsed, parseErr := time.Parse(time.RFC3339, in.StartTime)
@@ -58,12 +74,15 @@ func Build(client *businessclient.Client, userID, conversationID string) ([]tool
 			request.StartTime = timestamppb.New(parsed)
 		}
 		response, callErr := client.SearchCompanions(ctx, request)
-		return encode(response, callErr)
+		return encodeSearch(response, callErr, request.StartTime != nil && request.DurationMinutes > 0)
 	})
 	if err != nil {
 		return nil, err
 	}
 	draft, err := utils.InferTool("create_order_draft", "信息完整后创建真实订单草稿并返回 Preview 事实；不得自行提供价格或金额", func(ctx context.Context, in draftInput) (map[string]any, error) {
+		started := time.Now()
+		observe("create_order_draft", "started", started)
+		defer observe("create_order_draft", "completed", started)
 		parsed, parseErr := time.Parse(time.RFC3339, in.StartTime)
 		if parseErr != nil {
 			return toolError("INVALID_ARGUMENT", "start_time 必须为 RFC3339"), nil
@@ -75,6 +94,9 @@ func Build(client *businessclient.Client, userID, conversationID string) ([]tool
 		return nil, err
 	}
 	confirm, err := utils.InferTool("confirm_order", "仅当用户对当前 Preview 明确确认且未修改条件时确认订单", func(ctx context.Context, in confirmInput) (map[string]any, error) {
+		started := time.Now()
+		observe("confirm_order", "started", started)
+		defer observe("confirm_order", "completed", started)
 		response, callErr := client.ConfirmOrder(ctx, &businessv1.ConfirmOrderRequest{UserId: userID, ConversationId: conversationID, DraftId: in.DraftID})
 		return encode(response, callErr)
 	})
@@ -99,6 +121,26 @@ func encode(message proto.Message, err error) (map[string]any, error) {
 }
 func toolError(code, message string) map[string]any {
 	return map[string]any{"error": map[string]any{"code": code, "message": message, "retryable": code == "BUSINESS_RPC_TIMEOUT"}}
+}
+
+func encodeSearch(response *businessv1.SearchCompanionsResponse, err error, slotVerified bool) (map[string]any, error) {
+	if err != nil {
+		return toolError("BUSINESS_RPC_TIMEOUT", "业务服务暂时繁忙，请稍后重试"), nil
+	}
+	if value := response.GetError(); value != nil {
+		return map[string]any{"error": map[string]any{"code": value.GetCode(), "message": value.GetMessage(), "retryable": value.GetRetryable()}}, nil
+	}
+	candidates := make([]map[string]any, 0, len(response.GetCandidates()))
+	for _, value := range response.GetCandidates() {
+		item := value.GetCompanion()
+		candidates = append(candidates, map[string]any{
+			"companion_id": item.GetCompanionId(), "name": item.GetName(), "gender": item.GetGender(),
+			"game_ids": item.GetGameIds(), "styles": item.GetStyles(), "skill_level": item.GetSkillLevel(),
+			"price_per_hour": item.GetPricePerHour(), "tags": item.GetTags(), "matched_tags": value.GetMatchedTags(),
+			"tag_match_count": value.GetTagMatchCount(), "slot_verified": slotVerified,
+		})
+	}
+	return map[string]any{"candidates": candidates}, nil
 }
 func ValidateControlledTags(tags []string) error {
 	allowed := map[string]bool{"上分": true, "教学": true, "高段位": true, "指挥": true, "会聊天": true, "话多": true, "搞笑": true, "安静": true, "情绪价值": true, "不压力": true, "耐心": true, "声音甜": true, "御姐音": true, "少年音": true}
