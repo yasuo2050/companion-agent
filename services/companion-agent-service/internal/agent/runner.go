@@ -3,13 +3,15 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
+	"sync/atomic"
 	"time"
 
 	businessv1 "companion-agent/contracts/companion-business/gen"
 	businessclient "companion-agent/services/companion-agent-service/internal/client/business"
+	"companion-agent/services/companion-agent-service/internal/flowlog"
 	toolbuilder "companion-agent/services/companion-agent-service/internal/tool"
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/components/model"
@@ -37,6 +39,7 @@ func NewRunner(chatModel model.ToolCallingChatModel, business *businessclient.Cl
 
 // Run 加载 Profile 后运行真实 Eino Agent Loop，并逐事件回调。
 func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID string, history []*schema.Message, emit func(Event)) ([]*schema.Message, error) {
+	flowlog.Info("加载用户画像", "flow_step", "profile_load_started", "request_id", requestID, "conversation_id", conversationID, "user_id", userID)
 	profileResponse, err := r.business.GetUserProfile(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("加载用户画像失败: %w", err)
@@ -44,18 +47,26 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 	if profileResponse.GetError() != nil {
 		return nil, fmt.Errorf("加载用户画像失败: %s", profileResponse.GetError().GetMessage())
 	}
-	tools, err := toolbuilder.Build(r.business, userID, conversationID, func(toolName, phase string, startedAt time.Time) {
+	profile := profileResponse.GetProfile()
+	flowlog.Info("用户画像已加载", "flow_step", "profile_load_completed", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "favorite_game_ids", profile.GetFavoriteGameIds(), "usual_duration_minutes", profile.GetUsualDurationMinutes(), "preferred_tags", profile.GetPreferredTags())
+	var llmIteration atomic.Int64
+	tools, err := toolbuilder.Build(r.business, userID, conversationID, func(toolName, phase string, startedAt time.Time, input any) {
 		if phase == "started" {
 			emit(Event{Type: "status", ToolName: toolName})
+			arguments := marshalLogValue(input)
+			flowlog.Info("大模型决定调用工具", "flow_step", "llm_tool_call", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "llm_iteration", llmIteration.Load(), "tool_name", toolName, "arguments", arguments)
+			flowlog.Info("工具开始执行", "flow_step", "tool_started", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "tool_name", toolName, "arguments", arguments)
 			return
 		}
-		slog.Info("Agent Tool 完成", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "tool_name", toolName, "tool_duration_ms", time.Since(startedAt).Milliseconds())
+		flowlog.Info("工具执行完成", "flow_step", "tool_completed", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "tool_name", toolName, "tool_duration_ms", time.Since(startedAt).Milliseconds())
+		flowlog.Info("工具返回结果", "flow_step", "tool_result", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "tool_name", toolName, "result", marshalLogValue(input))
 	})
 	if err != nil {
 		return nil, err
 	}
-	instruction := systemInstruction(profileResponse.GetProfile(), time.Now())
-	instance, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{Name: "companion-order-agent", Description: "游戏陪玩下单助手", Instruction: instruction, Model: r.model, ToolsConfig: adk.ToolsConfig{ToolsNodeConfig: compose.ToolsNodeConfig{Tools: tools}}, MaxIterations: r.maxIterations})
+	instruction := systemInstruction(profile, time.Now())
+	modelWithTrace := newTracedModel(r.model, requestID, conversationID, userID, r.modelAlias, &llmIteration)
+	instance, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{Name: "companion-order-agent", Description: "游戏陪玩下单助手", Instruction: instruction, Model: modelWithTrace, ToolsConfig: adk.ToolsConfig{ToolsNodeConfig: compose.ToolsNodeConfig{Tools: tools}}, MaxIterations: r.maxIterations})
 	if err != nil {
 		return nil, err
 	}
@@ -105,12 +116,33 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 			continue
 		}
 		outputs = append(outputs, message)
+		logMessageFlow(requestID, conversationID, userID, llmIteration.Load(), message)
 		if variant.Role != schema.Tool {
 			emit(Event{Type: "message", Message: message})
 		}
 	}
 	logTurnTrace(requestID, conversationID, userID, r.modelAlias, time.Since(started), outputs)
 	return outputs, nil
+}
+
+func marshalLogValue(value any) string {
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return fmt.Sprintf("%v", value)
+	}
+	return string(raw)
+}
+
+func logMessageFlow(requestID, conversationID, userID string, llmIteration int64, message *schema.Message) {
+	if message == nil {
+		return
+	}
+	if message.Role != schema.Assistant {
+		return
+	}
+	if len(message.ToolCalls) == 0 && message.Content != "" {
+		flowlog.Info("大模型生成最终回复", "flow_step", "llm_final_response", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "llm_iteration", llmIteration, "response", message.Content)
+	}
 }
 func systemInstruction(profile *businessv1.UserProfile, now time.Time) string {
 	profileJSON, _ := protojson.Marshal(profile)

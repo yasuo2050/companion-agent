@@ -40,65 +40,73 @@ type confirmInput struct {
 }
 
 // EventObserver 接收真实 Tool 执行阶段，用于 SSE 状态和 Trace。
-type EventObserver func(toolName, phase string, startedAt time.Time)
+type EventObserver func(toolName, phase string, startedAt time.Time, input any)
 
 // Build 为单次请求创建带服务端身份上下文的工具集合。
 func Build(client *businessclient.Client, userID, conversationID string, observers ...EventObserver) ([]tool.BaseTool, error) {
-	observe := func(name, phase string, started time.Time) {
+	observe := func(name, phase string, started time.Time, input any) {
 		for _, observer := range observers {
 			if observer != nil {
-				observer(name, phase, started)
+				observer(name, phase, started, input)
 			}
 		}
 	}
 	recent, err := utils.InferTool("get_recent_orders", "查询当前用户真实历史订单；出现上次、之前、还是那个等指代时使用", func(ctx context.Context, in recentInput) (map[string]any, error) {
 		started := time.Now()
-		observe("get_recent_orders", "started", started)
-		defer observe("get_recent_orders", "completed", started)
+		observe("get_recent_orders", "started", started, in)
 		response, callErr := client.GetRecentOrders(ctx, &businessv1.GetRecentOrdersRequest{UserId: userID, Limit: in.Limit})
-		return encode(response, callErr)
+		output, runErr := encode(response, callErr)
+		observe("get_recent_orders", "completed", started, output)
+		return output, runErr
 	})
 	if err != nil {
 		return nil, err
 	}
 	search, err := utils.InferTool("search_companions", "查询满足当前硬条件的真实陪玩候选；preferred_tags 只计算匹配，不过滤或重排", func(ctx context.Context, in searchInput) (map[string]any, error) {
 		started := time.Now()
-		observe("search_companions", "started", started)
-		defer observe("search_companions", "completed", started)
+		observe("search_companions", "started", started, in)
 		request := &businessv1.SearchCompanionsRequest{CompanionId: in.CompanionID, GameId: in.GameID, Gender: in.Gender, MaxPricePerHour: in.MaxPricePerHour, DurationMinutes: in.DurationMinutes, PreferredTags: in.PreferredTags, Limit: in.Limit}
 		if in.StartTime != "" {
 			parsed, parseErr := time.Parse(time.RFC3339, in.StartTime)
 			if parseErr != nil {
-				return toolError("INVALID_ARGUMENT", "start_time 必须为 RFC3339"), nil
+				output := toolError("INVALID_ARGUMENT", "start_time 必须为 RFC3339")
+				observe("search_companions", "completed", started, output)
+				return output, nil
 			}
 			request.StartTime = timestamppb.New(parsed)
 		}
 		response, callErr := client.SearchCompanions(ctx, request)
-		return encodeSearch(response, callErr, request.StartTime != nil && request.DurationMinutes > 0)
+		output, runErr := encodeSearch(response, callErr, request.StartTime != nil && request.DurationMinutes > 0)
+		observe("search_companions", "completed", started, output)
+		return output, runErr
 	})
 	if err != nil {
 		return nil, err
 	}
 	draft, err := utils.InferTool("create_order_draft", "信息完整后创建真实订单草稿并返回 Preview 事实；不得自行提供价格或金额", func(ctx context.Context, in draftInput) (map[string]any, error) {
 		started := time.Now()
-		observe("create_order_draft", "started", started)
-		defer observe("create_order_draft", "completed", started)
+		observe("create_order_draft", "started", started, in)
 		parsed, parseErr := time.Parse(time.RFC3339, in.StartTime)
 		if parseErr != nil {
-			return toolError("INVALID_ARGUMENT", "start_time 必须为 RFC3339"), nil
+			output := toolError("INVALID_ARGUMENT", "start_time 必须为 RFC3339")
+			observe("create_order_draft", "completed", started, output)
+			return output, nil
 		}
 		response, callErr := client.CreateOrderDraft(ctx, &businessv1.CreateOrderDraftRequest{UserId: userID, ConversationId: conversationID, CompanionId: in.CompanionID, GameId: in.GameID, StartTime: timestamppb.New(parsed), DurationMinutes: in.DurationMinutes})
-		return encode(response, callErr)
+		output, runErr := encode(response, callErr)
+		observe("create_order_draft", "completed", started, output)
+		return output, runErr
 	})
 	if err != nil {
 		return nil, err
 	}
 	confirm, err := utils.InferTool("confirm_order", "仅当用户对当前 Preview 明确确认且未修改条件时确认订单", func(ctx context.Context, in confirmInput) (map[string]any, error) {
 		started := time.Now()
-		observe("confirm_order", "started", started)
-		defer observe("confirm_order", "completed", started)
+		observe("confirm_order", "started", started, in)
 		response, callErr := client.ConfirmOrder(ctx, &businessv1.ConfirmOrderRequest{UserId: userID, ConversationId: conversationID, DraftId: in.DraftID})
-		return encode(response, callErr)
+		output, runErr := encode(response, callErr)
+		observe("confirm_order", "completed", started, output)
+		return output, runErr
 	})
 	if err != nil {
 		return nil, err

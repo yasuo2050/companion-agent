@@ -16,7 +16,7 @@ func TestLoadDoesNotRequireLLMForDeterministicComponents(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.MaxIterations != 6 || cfg.ConversationTTL.Hours() != 24 {
+	if cfg.MaxIterations != 6 || cfg.ConversationTTL.Hours() != 24 || cfg.AgentFlowLogPath != "logs/agent-flow.log" {
 		t.Fatalf("默认配置错误: %#v", cfg)
 	}
 }

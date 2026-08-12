@@ -2,10 +2,10 @@ package agent
 
 import (
 	"encoding/json"
-	"log/slog"
 	"strings"
 	"time"
 
+	"companion-agent/services/companion-agent-service/internal/flowlog"
 	arkmodel "github.com/cloudwego/eino-ext/components/model/ark"
 	"github.com/cloudwego/eino/schema"
 )
@@ -56,9 +56,6 @@ func logTurnTrace(requestID, conversationID, userID, modelAlias string, duration
 				outputTokens += usage.CompletionTokens
 				totalTokens += usage.TotalTokens
 			}
-			for _, call := range message.ToolCalls {
-				slog.Info("LLM ToolCall", "request_id", requestID, "conversation_id", conversationID, "tool_name", call.Function.Name, "safe_tool_args", call.Function.Arguments)
-			}
 		}
 		if message.Role != schema.Tool || message.Content == "" {
 			continue
@@ -86,7 +83,7 @@ func logTurnTrace(requestID, conversationID, userID, modelAlias string, duration
 	if recommendedID == "" {
 		recommendedID = inferRecommendedID(finalText, candidates)
 	}
-	slog.Info("Agent Turn 完成",
+	flowlog.Info("对话轮次汇总", "flow_step", "turn_summary",
 		"request_id", requestID, "conversation_id", conversationID, "user_id", userID,
 		"provider", "volcengine-ark", "model", modelAlias, "ark_request_ids", arkRequestIDs,
 		"llm_iterations", llmIterations, "llm_duration_ms", duration.Milliseconds(),

@@ -18,6 +18,14 @@ Smoke 命令依次验证真实 Generate、Stream、Tool Calling 和 Tool Result 
 go run ./cmd/server
 ```
 
+启动后可在当前模块目录实时查看对话执行流水：
+
+```bash
+tail -f logs/agent-flow.log
+```
+
+流水包含用户原文、大模型调用轮次、ToolCall/ToolResult、最终回复与耗时，并用 `request_id` 串联。通过 `AGENT_FLOW_LOG_PATH` 可修改默认的 `logs/agent-flow.log`。日志不包含 Ark API Key，但含本地对话与业务数据，不得对外分发。
+
 页面地址为 `http://127.0.0.1:8080/`，就绪检查为 `GET /readyz`。SSE 事件固定为 `turn_started → status* → delta* → done`，失败时以 `error` 代替 `done`。
 
 AI Agent Runtime，负责 HTTP Chat API、SSE、Eino、Ark、Context Builder、4 个 Agent Tool、Business gRPC Client、Redis Conversation 和 Agent Trace。

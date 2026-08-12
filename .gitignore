@@ -1,9 +1,9 @@
 .DS_Store
 bin/
 coverage/
+logs/
 *.out
 *.test
 .env
 .env.*
 !.env.example
-

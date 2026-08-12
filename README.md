@@ -67,6 +67,22 @@ curl http://127.0.0.1:8080/healthz
 curl http://127.0.0.1:8080/readyz
 ```
 
+## 查看对话调用流程
+
+Agent 会把每轮的用户输入、画像加载、每次大模型调用、Tool 参数与结果、最终回复及耗时写入流水文件。在项目根目录执行：
+
+```bash
+tail -f services/companion-agent-service/logs/agent-flow.log
+```
+
+只看某个对话：
+
+```bash
+tail -f services/companion-agent-service/logs/agent-flow.log | grep 'conversation_id=demo-10002-04'
+```
+
+每条记录都有 `flow_step`，典型顺序为 `turn_started → profile_load_* → llm_started → llm_tool_call → tool_started → tool_result → llm_started → llm_final_response → turn_completed`。日志默认追加写入，可用 `AGENT_FLOW_LOG_PATH` 修改位置。
+
 ## 环境变量
 
 | 变量 | 默认值 | 归属 |
@@ -80,6 +96,7 @@ curl http://127.0.0.1:8080/readyz
 | `LLM_RETRY_TIMES` | `1` | Agent |
 | `AGENT_MAX_ITERATIONS` | `6` | Agent |
 | `AGENT_HTTP_ADDR` | `:8080` | Agent |
+| `AGENT_FLOW_LOG_PATH` | `logs/agent-flow.log` | Agent 对话流水 |
 | `BUSINESS_GRPC_ADDR` | Agent 侧 `127.0.0.1:9090`，Business 侧 `:9090` | 两服务 |
 | `MONGO_URI` | `mongodb://127.0.0.1:27017` | Business |
 | `MONGO_DATABASE` | `companion_agent_mvp` | Business |
@@ -110,4 +127,4 @@ E2E 会真实访问 Ark，并在 MongoDB 创建可重置的 Draft/Order。默认
 
 ## 安全说明
 
-项目不读取 `.env`，也不包含 API Key 默认值。API Key 不写入代码、配置、README、MongoDB、Redis、Trace、测试快照或前端；日志只记录安全模型别名、RPC 名称与耗时。
+项目不读取 `.env`，也不包含 API Key 默认值。API Key 不写入代码、配置、README、MongoDB、Redis、Trace、测试快照或前端。本地对话流水会记录用户原文、Tool 参数和业务结果，便于 MVP 调试；日志目录已忽略提交，不得将该文件对外分发。

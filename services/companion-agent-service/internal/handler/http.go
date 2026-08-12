@@ -17,6 +17,7 @@ import (
 	"companion-agent/services/companion-agent-service/internal/agent"
 	businessclient "companion-agent/services/companion-agent-service/internal/client/business"
 	"companion-agent/services/companion-agent-service/internal/conversation"
+	"companion-agent/services/companion-agent-service/internal/flowlog"
 	"github.com/cloudwego/eino/schema"
 )
 
@@ -83,6 +84,7 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("X-Accel-Buffering", "no")
 	requestID := newRequestID()
+	flowlog.Info("对话开始", "flow_step", "turn_started", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "user_message", request.Message)
 	sendSSE(w, flusher, "turn_started", map[string]any{"request_id": requestID, "conversation_id": request.ConversationID})
 	ttfe := time.Since(started)
 	var ttts, ttft time.Duration
@@ -95,6 +97,7 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 			message = "该对话不属于当前用户"
 		}
 		sendSSE(w, flusher, "error", map[string]any{"request_id": requestID, "code": code, "message": message})
+		flowlog.Error("对话加载失败", "flow_step", "turn_failed", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "code", code, "error", err)
 		return
 	}
 	history := conversation.ToMessages(value.Messages)
@@ -120,6 +123,7 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 	})
 	if runErr != nil {
 		slog.Error("Agent 运行失败", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "code", agentErrorCode(runErr), "error", runErr)
+		flowlog.Error("Agent 运行失败", "flow_step", "turn_failed", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "code", agentErrorCode(runErr), "error", runErr)
 		sendSSE(w, flusher, "error", map[string]any{"request_id": requestID, "code": agentErrorCode(runErr), "message": "Agent 暂时无法完成本次请求，请稍后重试"})
 		return
 	}
@@ -137,10 +141,12 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.conversations.Save(r.Context(), value); err != nil {
 		sendSSE(w, flusher, "error", map[string]any{"request_id": requestID, "code": "CONVERSATION_SAVE_FAILED", "message": "对话保存失败，请重试"})
+		flowlog.Error("对话保存失败", "flow_step", "turn_failed", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "code", "CONVERSATION_SAVE_FAILED", "error", err)
 		return
 	}
 	sendSSE(w, flusher, "done", map[string]any{"request_id": requestID})
 	slog.Info("Agent 延迟指标", "request_id", requestID, "conversation_id", request.ConversationID, "ttfe_ms", ttfe.Milliseconds(), "ttts_ms", durationMillis(ttts), "ttft_ms", durationMillis(ttft), "total_ms", time.Since(started).Milliseconds())
+	flowlog.Info("对话结束", "flow_step", "turn_completed", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "total_ms", time.Since(started).Milliseconds())
 }
 func sendSSE(w http.ResponseWriter, flusher http.Flusher, event string, data any) {
 	raw, _ := json.Marshal(data)

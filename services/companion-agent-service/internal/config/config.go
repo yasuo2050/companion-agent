@@ -14,13 +14,14 @@ type Config struct {
 	LLMMaxTokens, LLMRetryTimes, MaxIterations                           int
 	LLMTimeout                                                           time.Duration
 	HTTPAddr, BusinessGRPCAddr, RedisAddr, RedisPassword, RedisKeyPrefix string
+	AgentFlowLogPath                                                     string
 	RedisDB                                                              int
 	ConversationTTL                                                      time.Duration
 }
 
 // Load 从环境变量读取并校验配置。
 func Load(requireLLM bool) (Config, error) {
-	cfg := Config{ArkAPIKey: os.Getenv("ARK_API_KEY"), ArkModelID: os.Getenv("ARK_MODEL_ID"), ArkBaseURL: env("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"), LLMProvider: env("LLM_PROVIDER", "ark"), LLMModelAlias: env("LLM_MODEL_ALIAS", "doubao-seed-2.1-turbo"), HTTPAddr: env("AGENT_HTTP_ADDR", ":8080"), BusinessGRPCAddr: env("BUSINESS_GRPC_ADDR", "127.0.0.1:9090"), RedisAddr: env("REDIS_ADDR", "127.0.0.1:6379"), RedisPassword: os.Getenv("REDIS_PASSWORD"), RedisKeyPrefix: env("REDIS_KEY_PREFIX", "companion-agent:mvp:")}
+	cfg := Config{ArkAPIKey: os.Getenv("ARK_API_KEY"), ArkModelID: os.Getenv("ARK_MODEL_ID"), ArkBaseURL: env("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"), LLMProvider: env("LLM_PROVIDER", "ark"), LLMModelAlias: env("LLM_MODEL_ALIAS", "doubao-seed-2.1-turbo"), HTTPAddr: env("AGENT_HTTP_ADDR", ":8080"), BusinessGRPCAddr: env("BUSINESS_GRPC_ADDR", "127.0.0.1:9090"), RedisAddr: env("REDIS_ADDR", "127.0.0.1:6379"), RedisPassword: os.Getenv("REDIS_PASSWORD"), RedisKeyPrefix: env("REDIS_KEY_PREFIX", "companion-agent:mvp:"), AgentFlowLogPath: env("AGENT_FLOW_LOG_PATH", "logs/agent-flow.log")}
 	var err error
 	if cfg.LLMMaxTokens, err = intValue("LLM_MAX_TOKENS", 2048); err != nil {
 		return Config{}, err

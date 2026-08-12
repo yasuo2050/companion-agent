@@ -13,6 +13,7 @@ import (
 	businessclient "companion-agent/services/companion-agent-service/internal/client/business"
 	"companion-agent/services/companion-agent-service/internal/config"
 	"companion-agent/services/companion-agent-service/internal/conversation"
+	"companion-agent/services/companion-agent-service/internal/flowlog"
 	"companion-agent/services/companion-agent-service/internal/handler"
 	llmfactory "companion-agent/services/companion-agent-service/internal/llm"
 	webassets "companion-agent/services/companion-agent-service/web"
@@ -24,6 +25,13 @@ func main() {
 		slog.Error("配置加载失败", "error", err)
 		os.Exit(1)
 	}
+	flowFile, flowPath, err := flowlog.Configure(cfg.AgentFlowLogPath)
+	if err != nil {
+		slog.Error("对话流水日志初始化失败", "path", cfg.AgentFlowLogPath, "error", err)
+		os.Exit(1)
+	}
+	defer flowFile.Close()
+	slog.Info("对话流水日志已启用", "path", flowPath)
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.LLMTimeout)
 	defer cancel()
 	chatModel, err := llmfactory.NewChatModel(ctx, cfg)
