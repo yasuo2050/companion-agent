@@ -2,15 +2,14 @@
 
 本服务负责 Ark/Eino Agent、4 个 Go Tool、gRPC Business Client、Redis Conversation、HTTP/SSE、Trace 与最小 Chat UI，不直接访问 MongoDB。
 
-Ark 凭证只能通过当前进程环境变量提供：
+Agent 启动时会自动读取当前目录的 `.env`，首次使用：
 
 ```bash
-export ARK_API_KEY="<从火山方舟控制台复制后仅注入当前终端>"
-export ARK_MODEL_ID="doubao-seed-2-1-turbo-260628"
+# 创建 .env，填写 ARK_API_KEY 和 ARK_MODEL_ID
 go run ./cmd/ark-smoke
 ```
 
-Smoke 命令依次验证真实 Generate、Stream、Tool Calling 和 Tool Result 回传，不会打印 API Key。
+`.env` 不会被 Git 提交，同名系统环境变量的优先级更高。Smoke 命令依次验证真实 Generate、Stream、Tool Calling 和 Tool Result 回传，不会打印 API Key。
 
 启动服务：
 

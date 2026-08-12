@@ -48,12 +48,18 @@ go run ./cmd/seed --reset
 go run ./cmd/server
 ```
 
-终端二，只在当前进程环境注入 Ark 凭证并启动 Agent：
+终端二，首次在 Agent 模块目录创建本地 `.env`：
 
 ```bash
 cd services/companion-agent-service
-export ARK_API_KEY="<从火山方舟控制台复制后仅注入当前终端>"
-export ARK_MODEL_ID="doubao-seed-2-1-turbo-260628"
+# .env 内填写：
+# ARK_API_KEY=<本地 Ark Key>
+# ARK_MODEL_ID=doubao-seed-2-1-turbo-260628
+```
+
+之后可直接启动，无需重复 `export`：
+
+```bash
 go run ./cmd/ark-smoke
 go run ./cmd/server
 ```
@@ -127,4 +133,4 @@ E2E 会真实访问 Ark，并在 MongoDB 创建可重置的 Draft/Order。默认
 
 ## 安全说明
 
-项目不读取 `.env`，也不包含 API Key 默认值。API Key 不写入代码、配置、README、MongoDB、Redis、Trace、测试快照或前端。本地对话流水会记录用户原文、Tool 参数和业务结果，便于 MVP 调试；日志目录已忽略提交，不得将该文件对外分发。
+项目启动时会读取 Agent 模块当前目录的 `.env`，同名系统环境变量优先。`.env` 已被 Git 忽略，不得提交或对外分发。API Key 不写入代码、README、MongoDB、Redis、Trace、测试快照或前端。本地对话流水会记录用户原文、Tool 参数和业务结果，日志目录也已忽略提交。
