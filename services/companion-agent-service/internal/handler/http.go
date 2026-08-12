@@ -159,7 +159,7 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 	_ = json.NewEncoder(w).Encode(value)
 }
 func toolStatus(name string) string {
-	values := map[string]string{"get_recent_orders": "正在查看你之前的订单…", "search_companions": "正在确认陪玩档期…", "create_order_draft": "正在生成订单信息…", "confirm_order": "正在确认订单…"}
+	values := map[string]string{"get_recent_orders": "正在查看你之前的订单…", "search_companions": "正在确认陪玩档期…", "create_order_draft": "正在为你创建订单预览…", "confirm_order": "正在确认订单…"}
 	if value := values[name]; value != "" {
 		return value
 	}

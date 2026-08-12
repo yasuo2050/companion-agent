@@ -50,6 +50,7 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 	profile := profileResponse.GetProfile()
 	flowlog.Info("用户画像已加载", "flow_step", "profile_load_completed", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "favorite_game_ids", profile.GetFavoriteGameIds(), "usual_duration_minutes", profile.GetUsualDurationMinutes(), "preferred_tags", profile.GetPreferredTags())
 	var llmIteration atomic.Int64
+	var fixedPresentation atomic.Pointer[orderPresentation]
 	tools, err := toolbuilder.Build(r.business, userID, conversationID, func(toolName, phase string, startedAt time.Time, input any) {
 		if phase == "started" {
 			emit(Event{Type: "status", ToolName: toolName})
@@ -60,6 +61,9 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 		}
 		flowlog.Info("工具执行完成", "flow_step", "tool_completed", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "tool_name", toolName, "tool_duration_ms", time.Since(startedAt).Milliseconds())
 		flowlog.Info("工具返回结果", "flow_step", "tool_result", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "tool_name", toolName, "result", marshalLogValue(input))
+		if presentation, ok := renderOrderToolResult(toolName, input); ok {
+			fixedPresentation.Store(&presentation)
+		}
 	})
 	if err != nil {
 		return nil, err
@@ -97,9 +101,6 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 					return outputs, recvErr
 				}
 				chunks = append(chunks, chunk)
-				if variant.Role == schema.Assistant && chunk.Content != "" {
-					emit(Event{Type: "delta", Content: chunk.Content})
-				}
 			}
 			variant.MessageStream.Close()
 			if len(chunks) == 0 {
@@ -115,8 +116,22 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 		if message == nil {
 			continue
 		}
+		renderedByCode := false
+		if message.Role == schema.Assistant && len(message.ToolCalls) == 0 {
+			if presentation := fixedPresentation.Swap(nil); presentation != nil {
+				flowlog.Info("忽略大模型订单展示文案", "flow_step", "llm_order_response_ignored", "request_id", requestID, "conversation_id", conversationID, "user_id", userID)
+				message.Content = presentation.Content
+				renderedByCode = true
+				emit(Event{Type: "delta", Content: message.Content})
+				flowlog.Info("代码生成固定订单展示", "flow_step", "order_template_rendered", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "template_kind", presentation.Kind, "response", message.Content)
+			} else if message.Content != "" {
+				emit(Event{Type: "delta", Content: message.Content})
+			}
+		}
 		outputs = append(outputs, message)
-		logMessageFlow(requestID, conversationID, userID, llmIteration.Load(), message)
+		if !renderedByCode {
+			logMessageFlow(requestID, conversationID, userID, llmIteration.Load(), message)
+		}
 		if variant.Role != schema.Tool {
 			emit(Event{Type: "message", Message: message})
 		}
@@ -154,6 +169,6 @@ func systemInstruction(profile *businessv1.UserProfile, now time.Time) string {
 search_companions 返回的候选顺序是稳定业务顺序，不代表推荐排名。你必须逐个比较候选 tags 与用户画像 preferred_tags：优先推荐标签重合数最多的人，再参考当前软偏好与价格；不得总选列表第一人。最终推荐与理由由你完成。
 当 search_companions 请求中包含 start_time 和 duration_minutes 时，返回的每个 candidate 都已经由业务服务确认该时间段可约；不得自行重新解释 available_slots 或声称返回候选在该时段不可约。
 优先明确推荐一人，不把大量候选丢给用户。唯一 favorite_game_ids 和 usual_duration_minutes 可作为默认，但 Preview 必须展示；具体开始时间不得从画像猜测。创建 Draft 前，本轮必须先用 search_companions 验证真实候选和当前档期。
-下单信息完整后先调用 create_order_draft，并用返回事实展示陪玩、游戏、时间、时长、单价、总额、draft_id 的 Preview。用户明确说“创建订单预览、生成订单信息、帮我下单”且必要信息完整时，在 search_companions 后必须继续调用 create_order_draft，禁止先反问是否需要创建 Preview。只有用户对当前 Preview 明确确认且没有修改条件，才调用 confirm_order。
+下单信息完整后先调用 create_order_draft。订单 Preview 和确认结果由服务端代码按 Tool 返回值固定渲染，你不得计算、转换或重新组织其中的价格和订单字段。用户明确说“创建订单预览、生成订单信息、帮我下单”且必要信息完整时，在 search_companions 后必须继续调用 create_order_draft，禁止先反问是否需要创建 Preview。只有用户对当前 Preview 明确确认且没有修改条件，才调用 confirm_order。
 PRICE_CHANGED 时说明变价，重新调用 create_order_draft 展示新 Preview，并等待再次确认。Tool 失败不得假装成功。回复使用简洁中文。`, now.Format(time.RFC3339), string(profileJSON))
 }
