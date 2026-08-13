@@ -37,13 +37,20 @@ func TestControlledTags(t *testing.T) {
 }
 
 func TestRecentOrderDefaultsFillOnlyMissingSearchParameters(t *testing.T) {
-	defaults := OrderDefaults{GameID: "naraka", DurationMinutes: 120, Source: "recent_order"}
+	defaults := OrderDefaults{CompanionID: "p003", GameID: "naraka", DurationMinutes: 120, Source: "recent_order"}
 	filled := applySearchDefaults(searchInput{}, defaults)
 	if filled.GameID != "naraka" || filled.DurationMinutes != 120 {
 		t.Fatalf("未补齐最近订单默认值: %#v", filled)
 	}
-	explicit := applySearchDefaults(searchInput{GameID: "lol", DurationMinutes: 90}, defaults)
-	if explicit.GameID != "lol" || explicit.DurationMinutes != 90 {
+	if filled.CompanionID != "" {
+		t.Fatalf("普通搜索不得沿用最近陪玩: %#v", filled)
+	}
+	repeat := applySearchDefaults(searchInput{ReuseRecentOrder: true}, defaults)
+	if repeat.CompanionID != "p003" {
+		t.Fatalf("复购搜索未补齐最近陪玩: %#v", repeat)
+	}
+	explicit := applySearchDefaults(searchInput{CompanionID: "p001", ReuseRecentOrder: true, GameID: "lol", DurationMinutes: 90}, defaults)
+	if explicit.CompanionID != "p001" || explicit.GameID != "lol" || explicit.DurationMinutes != 90 {
 		t.Fatalf("用户明确参数不得被覆盖: %#v", explicit)
 	}
 }
@@ -53,5 +60,20 @@ func TestRecentOrderDefaultsFillOnlyMissingDraftParameters(t *testing.T) {
 	filled := applyDraftDefaults(draftInput{CompanionID: "p003", StartTime: "2026-08-13T14:00:00+08:00"}, defaults)
 	if filled.GameID != "hok" || filled.DurationMinutes != 90 {
 		t.Fatalf("草稿未补齐最近订单默认值: %#v", filled)
+	}
+}
+
+func TestRecentOrderReuseRequiresHistoryToolAndCompanion(t *testing.T) {
+	if output := validateRecentOrderReuse(searchInput{ReuseRecentOrder: true, CompanionID: "p003"}, false); output == nil {
+		t.Fatal("未调用历史订单工具时不得执行复购搜索")
+	}
+	if output := validateRecentOrderReuse(searchInput{ReuseRecentOrder: true}, true); output == nil {
+		t.Fatal("没有最近陪玩时不得退化为普通搜索")
+	}
+	if output := validateRecentOrderReuse(searchInput{ReuseRecentOrder: true, CompanionID: "p003"}, true); output != nil {
+		t.Fatalf("历史订单已查询且陪玩完整时不应报错: %#v", output)
+	}
+	if output := validateRecentOrderReuse(searchInput{}, false); output != nil {
+		t.Fatalf("普通搜索不应依赖历史订单工具: %#v", output)
 	}
 }

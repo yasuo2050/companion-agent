@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	businessv1 "companion-agent/contracts/companion-business/gen"
@@ -20,14 +21,15 @@ type recentInput struct {
 	Limit int32 `json:"limit" jsonschema_description:"返回最近订单数量，默认 1，最大 10"`
 }
 type searchInput struct {
-	CompanionID     string   `json:"companion_id,omitempty" jsonschema_description:"明确指定的陪玩 ID"`
-	GameID          string   `json:"game_id,omitempty" jsonschema_description:"用户明确指定或对话上下文已确定的游戏 ID：naraka、lol 或 hok；缺失时由服务端使用最近订单默认值"`
-	Gender          string   `json:"gender,omitempty" jsonschema_description:"只有用户明确要求时传 female 或 male"`
-	MaxPricePerHour int64    `json:"max_price_per_hour,omitempty" jsonschema_description:"只有用户明确说以内时传，单位分"`
-	StartTime       string   `json:"start_time,omitempty" jsonschema_description:"RFC3339 开始时间，Asia/Shanghai"`
-	DurationMinutes int32    `json:"duration_minutes,omitempty" jsonschema_description:"用户明确指定或对话上下文已确定的时长分钟；缺失时由服务端使用最近订单默认值"`
-	PreferredTags   []string `json:"preferred_tags,omitempty" jsonschema_description:"只能使用受控标签，属于软偏好"`
-	Limit           int32    `json:"limit,omitempty" jsonschema_description:"默认 5，最大 10"`
+	CompanionID      string   `json:"companion_id,omitempty" jsonschema_description:"明确指定的陪玩 ID"`
+	ReuseRecentOrder bool     `json:"reuse_recent_order,omitempty" jsonschema_description:"仅复购意图使用；再下一单、还是上次那个等场景设为 true，由服务端补齐最近已确认订单的陪玩"`
+	GameID           string   `json:"game_id,omitempty" jsonschema_description:"用户明确指定或对话上下文已确定的游戏 ID：naraka、lol 或 hok；缺失时由服务端使用最近订单默认值"`
+	Gender           string   `json:"gender,omitempty" jsonschema_description:"只有用户明确要求时传 female 或 male"`
+	MaxPricePerHour  int64    `json:"max_price_per_hour,omitempty" jsonschema_description:"只有用户明确说以内时传，单位分"`
+	StartTime        string   `json:"start_time,omitempty" jsonschema_description:"RFC3339 开始时间，Asia/Shanghai"`
+	DurationMinutes  int32    `json:"duration_minutes,omitempty" jsonschema_description:"用户明确指定或对话上下文已确定的时长分钟；缺失时由服务端使用最近订单默认值"`
+	PreferredTags    []string `json:"preferred_tags,omitempty" jsonschema_description:"只能使用受控标签，属于软偏好"`
+	Limit            int32    `json:"limit,omitempty" jsonschema_description:"默认 5，最大 10"`
 }
 type draftInput struct {
 	CompanionID     string `json:"companion_id" jsonschema:"required" jsonschema_description:"真实候选陪玩 ID"`
@@ -44,6 +46,8 @@ type EventObserver func(toolName, phase string, startedAt time.Time, input any)
 
 // OrderDefaults 是当用户未明确提供时，由服务端补齐的最近订单参数。
 type OrderDefaults struct {
+	CompanionID     string `json:"companion_id,omitempty"`
+	CompanionName   string `json:"companion_name,omitempty"`
 	GameID          string `json:"game_id,omitempty"`
 	DurationMinutes int32  `json:"duration_minutes,omitempty"`
 	Source          string `json:"source,omitempty"`
@@ -54,8 +58,9 @@ func Build(client *businessclient.Client, userID, conversationID string, observe
 	return BuildWithDefaults(client, userID, conversationID, OrderDefaults{}, observers...)
 }
 
-// BuildWithDefaults 创建工具，并在工具执行前用最近订单参数补齐缺失的游戏和时长。
+// BuildWithDefaults 创建工具，并在工具执行前确定性补齐缺失的最近订单参数。
 func BuildWithDefaults(client *businessclient.Client, userID, conversationID string, defaults OrderDefaults, observers ...EventObserver) ([]tool.BaseTool, error) {
+	var recentOrderChecked atomic.Bool
 	observe := func(name, phase string, started time.Time, input any) {
 		for _, observer := range observers {
 			if observer != nil {
@@ -63,10 +68,13 @@ func BuildWithDefaults(client *businessclient.Client, userID, conversationID str
 			}
 		}
 	}
-	recent, err := utils.InferTool("get_recent_orders", "查询当前用户真实历史订单；出现上次、之前、还是那个等指代时使用", func(ctx context.Context, in recentInput) (map[string]any, error) {
+	recent, err := utils.InferTool("get_recent_orders", "查询当前用户最近已确认订单；再下一单、再来一单、还是上次那个、照上次来等复购意图必须先调用", func(ctx context.Context, in recentInput) (map[string]any, error) {
 		started := time.Now()
 		observe("get_recent_orders", "started", started, in)
 		response, callErr := client.GetRecentOrders(ctx, &businessv1.GetRecentOrdersRequest{UserId: userID, Limit: in.Limit})
+		if callErr == nil && response.GetError() == nil {
+			recentOrderChecked.Store(true)
+		}
 		output, runErr := encode(response, callErr)
 		observe("get_recent_orders", "completed", started, output)
 		return output, runErr
@@ -78,6 +86,10 @@ func BuildWithDefaults(client *businessclient.Client, userID, conversationID str
 		in = applySearchDefaults(in, defaults)
 		started := time.Now()
 		observe("search_companions", "started", started, in)
+		if output := validateRecentOrderReuse(in, recentOrderChecked.Load()); output != nil {
+			observe("search_companions", "completed", started, output)
+			return output, nil
+		}
 		request := &businessv1.SearchCompanionsRequest{CompanionId: in.CompanionID, GameId: in.GameID, Gender: in.Gender, MaxPricePerHour: in.MaxPricePerHour, DurationMinutes: in.DurationMinutes, PreferredTags: in.PreferredTags, Limit: in.Limit}
 		if in.StartTime != "" {
 			parsed, parseErr := time.Parse(time.RFC3339, in.StartTime)
@@ -129,6 +141,9 @@ func BuildWithDefaults(client *businessclient.Client, userID, conversationID str
 }
 
 func applySearchDefaults(in searchInput, defaults OrderDefaults) searchInput {
+	if in.ReuseRecentOrder && in.CompanionID == "" {
+		in.CompanionID = defaults.CompanionID
+	}
 	if in.GameID == "" {
 		in.GameID = defaults.GameID
 	}
@@ -136,6 +151,19 @@ func applySearchDefaults(in searchInput, defaults OrderDefaults) searchInput {
 		in.DurationMinutes = defaults.DurationMinutes
 	}
 	return in
+}
+
+func validateRecentOrderReuse(in searchInput, recentOrderChecked bool) map[string]any {
+	if !in.ReuseRecentOrder {
+		return nil
+	}
+	if !recentOrderChecked {
+		return toolError("RECENT_ORDER_REQUIRED", "复购前必须先调用 get_recent_orders 查询最近已确认订单")
+	}
+	if in.CompanionID == "" {
+		return toolError("RECENT_ORDER_NOT_FOUND", "没有可用于复购的最近已确认订单")
+	}
+	return nil
 }
 
 func applyDraftDefaults(in draftInput, defaults OrderDefaults) draftInput {

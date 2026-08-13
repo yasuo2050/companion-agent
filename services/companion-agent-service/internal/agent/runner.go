@@ -149,7 +149,7 @@ func (r *Runner) loadOrderDefaults(ctx context.Context, requestID, conversationI
 	}
 	defaults := deriveOrderDefaults(profile, recentOrders)
 
-	logArgs := []any{"flow_step", "order_defaults_loaded", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "source", defaults.Source, "game_id", defaults.GameID, "duration_minutes", defaults.DurationMinutes}
+	logArgs := []any{"flow_step", "order_defaults_loaded", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "source", defaults.Source, "companion_id", defaults.CompanionID, "game_id", defaults.GameID, "duration_minutes", defaults.DurationMinutes}
 	if err != nil {
 		logArgs = append(logArgs, "recent_order_error", err)
 	} else if response.GetError() != nil {
@@ -162,6 +162,8 @@ func (r *Runner) loadOrderDefaults(ctx context.Context, requestID, conversationI
 func deriveOrderDefaults(profile *businessv1.UserProfile, recentOrders []*businessv1.Order) toolbuilder.OrderDefaults {
 	defaults := toolbuilder.OrderDefaults{}
 	if len(recentOrders) > 0 {
+		defaults.CompanionID = recentOrders[0].GetCompanionId()
+		defaults.CompanionName = recentOrders[0].GetCompanionName()
 		defaults.GameID = recentOrders[0].GetGameId()
 		defaults.DurationMinutes = recentOrders[0].GetDurationMinutes()
 		defaults.Source = "recent_order"
@@ -207,8 +209,10 @@ func systemInstruction(profile *businessv1.UserProfile, defaults toolbuilder.Ord
 用户画像：%s
 服务端默认订单参数：%s
 规则：用户当前明确硬约束 > 当前软偏好 > 历史画像。只有“只要、必须、不要、以内”等才形成硬过滤。相对时间只基于当前时间解析。
-所有陪玩、价格、档期、Draft、Order 必须来自 Tool，不得虚构。提到上次或之前且需要历史事实时调用 get_recent_orders。查询真实候选必须调用 search_companions。
-当用户未明确游戏或时长时，必须使用“服务端默认订单参数”中的 game_id 和 duration_minutes，不得再追问已有默认值的字段。Tool 执行层会对缺失的这两个参数再次确定性补齐。用户当前或对话上下文已明确的游戏和时长始终优先。不得用最近订单默认陪玩、开始时间或价格。
+所有陪玩、价格、档期、Draft、Order 必须来自 Tool，不得虚构。查询真实候选必须调用 search_companions。
+当用户未明确游戏或时长时，必须使用“服务端默认订单参数”中的 game_id 和 duration_minutes，不得再追问已有默认值的字段。Tool 执行层会对缺失的这两个参数再次确定性补齐。用户当前或对话上下文已明确的参数始终优先。
+“再下一单、再来一单、还是上次那个、照上次来、上次那个”等表示复购：必须先调用 get_recent_orders(limit=1)，再调用 search_companions，并将 reuse_recent_order=true。代码会在用户没有明确更换陪玩时补齐最近已确认订单的 companion_id，同时沿用其 game_id 和 duration_minutes；用户明确说换陪玩、换游戏或改时长时，以本轮参数为准。普通“找个陪玩、重新找一个、换个人”不是复购，不得设置 reuse_recent_order=true，陪玩仍按画像和本轮偏好重新筛选。不得沿用历史开始时间或历史价格，开始时间取本轮表达，价格取业务服务当前事实。
+复购查询必须先验证最近陪玩的新档期：若不可约，不得假装复购成功；明确说明后再查询或推荐替代候选。用户说“再下一单”且时间完整时，完成档期验证后直接调用 create_order_draft 展示新 Preview，不要再询问是否生成 Preview。
 受控标签只有：上分、教学、高段位、指挥、会聊天、话多、搞笑、安静、情绪价值、不压力、耐心、声音甜、御姐音、少年音。不得创造标签。“有意思”映射搞笑和会聊天；“别太压力”映射不压力；“带我赢”映射上分和高段位；“教教我”映射教学和耐心。
 search_companions 返回的候选顺序是稳定业务顺序，不代表推荐排名。你必须逐个比较候选 tags 与用户画像 preferred_tags：优先推荐标签重合数最多的人，再参考当前软偏好与价格；不得总选列表第一人。最终推荐与理由由你完成。
 当 search_companions 请求中包含 start_time 和 duration_minutes 时，返回的每个 candidate 都已经由业务服务确认该时间段可约；不得自行重新解释 available_slots 或声称返回候选在该时段不可约。

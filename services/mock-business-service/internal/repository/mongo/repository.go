@@ -64,7 +64,7 @@ func (r *Repository) GetProfile(ctx context.Context, id string) (business.UserPr
 	return value, err
 }
 func (r *Repository) RecentOrders(ctx context.Context, userID string, limit int32) ([]business.Order, error) {
-	cur, err := r.db.Collection("orders").Find(ctx, bson.M{"user_id": userID}, options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}}).SetLimit(int64(limit)))
+	cur, err := r.db.Collection("orders").Find(ctx, bson.M{"user_id": userID, "status": business.OrderConfirmed}, options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}}).SetLimit(int64(limit)))
 	if err != nil {
 		return nil, err
 	}
