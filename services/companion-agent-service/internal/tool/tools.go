@@ -21,19 +21,19 @@ type recentInput struct {
 }
 type searchInput struct {
 	CompanionID     string   `json:"companion_id,omitempty" jsonschema_description:"明确指定的陪玩 ID"`
-	GameID          string   `json:"game_id,omitempty" jsonschema_description:"游戏 ID：naraka、lol 或 hok"`
+	GameID          string   `json:"game_id,omitempty" jsonschema_description:"用户明确指定或对话上下文已确定的游戏 ID：naraka、lol 或 hok；缺失时由服务端使用最近订单默认值"`
 	Gender          string   `json:"gender,omitempty" jsonschema_description:"只有用户明确要求时传 female 或 male"`
 	MaxPricePerHour int64    `json:"max_price_per_hour,omitempty" jsonschema_description:"只有用户明确说以内时传，单位分"`
 	StartTime       string   `json:"start_time,omitempty" jsonschema_description:"RFC3339 开始时间，Asia/Shanghai"`
-	DurationMinutes int32    `json:"duration_minutes,omitempty" jsonschema_description:"时长分钟"`
+	DurationMinutes int32    `json:"duration_minutes,omitempty" jsonschema_description:"用户明确指定或对话上下文已确定的时长分钟；缺失时由服务端使用最近订单默认值"`
 	PreferredTags   []string `json:"preferred_tags,omitempty" jsonschema_description:"只能使用受控标签，属于软偏好"`
 	Limit           int32    `json:"limit,omitempty" jsonschema_description:"默认 5，最大 10"`
 }
 type draftInput struct {
 	CompanionID     string `json:"companion_id" jsonschema:"required" jsonschema_description:"真实候选陪玩 ID"`
-	GameID          string `json:"game_id" jsonschema:"required" jsonschema_description:"游戏 ID"`
+	GameID          string `json:"game_id,omitempty" jsonschema_description:"用户明确指定或对话上下文已确定的游戏 ID；缺失时由服务端使用最近订单默认值"`
 	StartTime       string `json:"start_time" jsonschema:"required" jsonschema_description:"RFC3339 开始时间"`
-	DurationMinutes int32  `json:"duration_minutes" jsonschema:"required" jsonschema_description:"60 到 240 分钟，步长 30"`
+	DurationMinutes int32  `json:"duration_minutes,omitempty" jsonschema_description:"用户明确指定或对话上下文已确定的时长；缺失时由服务端使用最近订单默认值"`
 }
 type confirmInput struct {
 	DraftID string `json:"draft_id" jsonschema:"required" jsonschema_description:"当前 Preview 对应的 active Draft ID"`
@@ -42,8 +42,20 @@ type confirmInput struct {
 // EventObserver 接收真实 Tool 执行阶段，用于 SSE 状态和 Trace。
 type EventObserver func(toolName, phase string, startedAt time.Time, input any)
 
+// OrderDefaults 是当用户未明确提供时，由服务端补齐的最近订单参数。
+type OrderDefaults struct {
+	GameID          string `json:"game_id,omitempty"`
+	DurationMinutes int32  `json:"duration_minutes,omitempty"`
+	Source          string `json:"source,omitempty"`
+}
+
 // Build 为单次请求创建带服务端身份上下文的工具集合。
 func Build(client *businessclient.Client, userID, conversationID string, observers ...EventObserver) ([]tool.BaseTool, error) {
+	return BuildWithDefaults(client, userID, conversationID, OrderDefaults{}, observers...)
+}
+
+// BuildWithDefaults 创建工具，并在工具执行前用最近订单参数补齐缺失的游戏和时长。
+func BuildWithDefaults(client *businessclient.Client, userID, conversationID string, defaults OrderDefaults, observers ...EventObserver) ([]tool.BaseTool, error) {
 	observe := func(name, phase string, started time.Time, input any) {
 		for _, observer := range observers {
 			if observer != nil {
@@ -63,6 +75,7 @@ func Build(client *businessclient.Client, userID, conversationID string, observe
 		return nil, err
 	}
 	search, err := utils.InferTool("search_companions", "查询满足当前硬条件的真实陪玩候选；preferred_tags 只计算匹配，不过滤或重排", func(ctx context.Context, in searchInput) (map[string]any, error) {
+		in = applySearchDefaults(in, defaults)
 		started := time.Now()
 		observe("search_companions", "started", started, in)
 		request := &businessv1.SearchCompanionsRequest{CompanionId: in.CompanionID, GameId: in.GameID, Gender: in.Gender, MaxPricePerHour: in.MaxPricePerHour, DurationMinutes: in.DurationMinutes, PreferredTags: in.PreferredTags, Limit: in.Limit}
@@ -84,6 +97,7 @@ func Build(client *businessclient.Client, userID, conversationID string, observe
 		return nil, err
 	}
 	draft, err := utils.InferTool("create_order_draft", "信息完整后创建真实订单草稿并返回 Preview 事实；不得自行提供价格或金额", func(ctx context.Context, in draftInput) (map[string]any, error) {
+		in = applyDraftDefaults(in, defaults)
 		started := time.Now()
 		observe("create_order_draft", "started", started, in)
 		parsed, parseErr := time.Parse(time.RFC3339, in.StartTime)
@@ -112,6 +126,26 @@ func Build(client *businessclient.Client, userID, conversationID string, observe
 		return nil, err
 	}
 	return []tool.BaseTool{recent, search, draft, confirm}, nil
+}
+
+func applySearchDefaults(in searchInput, defaults OrderDefaults) searchInput {
+	if in.GameID == "" {
+		in.GameID = defaults.GameID
+	}
+	if in.DurationMinutes == 0 {
+		in.DurationMinutes = defaults.DurationMinutes
+	}
+	return in
+}
+
+func applyDraftDefaults(in draftInput, defaults OrderDefaults) draftInput {
+	if in.GameID == "" {
+		in.GameID = defaults.GameID
+	}
+	if in.DurationMinutes == 0 {
+		in.DurationMinutes = defaults.DurationMinutes
+	}
+	return in
 }
 func encode(message proto.Message, err error) (map[string]any, error) {
 	if err != nil {

@@ -35,3 +35,23 @@ func TestControlledTags(t *testing.T) {
 		t.Fatal("自然语言别名不得直接进入业务标签")
 	}
 }
+
+func TestRecentOrderDefaultsFillOnlyMissingSearchParameters(t *testing.T) {
+	defaults := OrderDefaults{GameID: "naraka", DurationMinutes: 120, Source: "recent_order"}
+	filled := applySearchDefaults(searchInput{}, defaults)
+	if filled.GameID != "naraka" || filled.DurationMinutes != 120 {
+		t.Fatalf("未补齐最近订单默认值: %#v", filled)
+	}
+	explicit := applySearchDefaults(searchInput{GameID: "lol", DurationMinutes: 90}, defaults)
+	if explicit.GameID != "lol" || explicit.DurationMinutes != 90 {
+		t.Fatalf("用户明确参数不得被覆盖: %#v", explicit)
+	}
+}
+
+func TestRecentOrderDefaultsFillOnlyMissingDraftParameters(t *testing.T) {
+	defaults := OrderDefaults{GameID: "hok", DurationMinutes: 90, Source: "recent_order"}
+	filled := applyDraftDefaults(draftInput{CompanionID: "p003", StartTime: "2026-08-13T14:00:00+08:00"}, defaults)
+	if filled.GameID != "hok" || filled.DurationMinutes != 90 {
+		t.Fatalf("草稿未补齐最近订单默认值: %#v", filled)
+	}
+}
