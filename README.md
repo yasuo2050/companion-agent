@@ -134,3 +134,26 @@ E2E 会真实访问 Ark，并在 MongoDB 创建可重置的 Draft/Order。默认
 ## 安全说明
 
 项目启动时会读取 Agent 模块当前目录的 `.env`，同名系统环境变量优先。`.env` 已被 Git 忽略，不得提交或对外分发。API Key 不写入代码、README、MongoDB、Redis、Trace、测试快照或前端。本地对话流水会记录用户原文、Tool 参数和业务结果，日志目录也已忽略提交。
+
+
+
+-------------------------------------------------
+http://127.0.0.1:8080/
+
+# 启动 Agent 服务
+cd services/companion-agent-service && go run ./cmd/server
+
+# 启动 Business 服务
+cd services/mock-business-service && go run ./cmd/server
+
+# 看操作日志
+tail -f ./services/companion-agent-service/logs/agent-flow.log
+
+# 初始化测试数据
+go run ./services/mock-business-service/cmd/seed
+## 重置数据
+go run ./services/mock-business-service/cmd/seed --reset
+
+
+
+
