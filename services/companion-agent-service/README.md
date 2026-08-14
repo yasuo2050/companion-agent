@@ -25,11 +25,11 @@ tail -f logs/agent-flow.log
 
 流水包含用户原文、大模型调用轮次、ToolCall/ToolResult、最终回复与耗时，并用 `request_id` 串联。通过 `AGENT_FLOW_LOG_PATH` 可修改默认的 `logs/agent-flow.log`。日志不包含 Ark API Key，但含本地对话与业务数据，不得对外分发。
 
-页面地址为 `http://127.0.0.1:8080/`，就绪检查为 `GET /readyz`。SSE 事件固定为 `turn_started → status* → delta* → done`，失败时以 `error` 代替 `done`。
+页面地址为 `http://127.0.0.1:8080/`，就绪检查为 `GET /readyz`。SSE 事件固定为 `turn_started → status* → delta* → done`，失败时以 `error` 代替 `done`。普通回答的 `delta` 直接来自 LLM 文本 chunk，Runner 同时合并完整消息写入 Redis 与 Trace，不再等待全部 chunk 收完才一次性返回。
 
 AI Agent Runtime，负责 HTTP Chat API、SSE、Eino、Ark、Context Builder、4 个 Agent Tool、Business gRPC Client、Redis Conversation 和 Agent Trace。
 
-订单 Preview 和确认结果不使用大模型文案：Go 代码直接解析 ToolResult，完成分转元、Asia/Shanghai 时区转换和固定模板渲染后，再写入 SSE、Redis 与 Trace。带 ToolCall 的中间模型文字不会发给前端。
+订单 Preview 和确认结果不使用大模型文案：Go 代码直接解析 ToolResult，完成分转元、Asia/Shanghai 时区转换和固定模板渲染后，再写入 SSE、Redis 与 Trace。结构化 ToolCall 参数不会作为文本 `delta` 发给前端；订单模板生成阶段也不会透传大模型订单文案。
 
 边界：
 

@@ -91,25 +91,15 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 		}
 		variant := event.Output.MessageOutput
 		var message *schema.Message
+		streamedContent := false
 		if variant.IsStreaming {
-			chunks := []*schema.Message{}
-			for {
-				chunk, recvErr := variant.MessageStream.Recv()
-				if recvErr == io.EOF {
-					break
-				}
-				if recvErr != nil {
-					return outputs, recvErr
-				}
-				chunks = append(chunks, chunk)
-			}
-			variant.MessageStream.Close()
-			if len(chunks) == 0 {
-				continue
-			}
-			message, err = schema.ConcatMessages(chunks)
+			streamModelText := variant.Role == schema.Assistant && fixedPresentation.Load() == nil
+			message, streamedContent, err = receiveMessageStream(variant.MessageStream, streamModelText, emit)
 			if err != nil {
 				return outputs, err
+			}
+			if message == nil {
+				continue
 			}
 		} else {
 			message = variant.Message
@@ -125,7 +115,7 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 				renderedByCode = true
 				emit(Event{Type: "delta", Content: message.Content})
 				flowlog.Info("代码生成固定订单展示", "flow_step", "order_template_rendered", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "template_kind", presentation.Kind, "response", message.Content)
-			} else if message.Content != "" {
+			} else if message.Content != "" && !streamedContent {
 				emit(Event{Type: "delta", Content: message.Content})
 			}
 		}
@@ -139,6 +129,36 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 	}
 	logTurnTrace(requestID, conversationID, userID, r.modelAlias, time.Since(started), outputs)
 	return outputs, nil
+}
+
+// receiveMessageStream 一边合并完整消息用于持久化，一边把安全的文本 chunk 实时发送给前端。
+// ToolCall 参数保存在结构化字段中，不作为 delta 输出；订单固定模板阶段由调用方关闭模型文本透传。
+func receiveMessageStream(stream *schema.StreamReader[*schema.Message], streamContent bool, emit func(Event)) (*schema.Message, bool, error) {
+	defer stream.Close()
+	chunks := []*schema.Message{}
+	streamedContent := false
+	for {
+		chunk, recvErr := stream.Recv()
+		if recvErr == io.EOF {
+			break
+		}
+		if recvErr != nil {
+			return nil, streamedContent, recvErr
+		}
+		chunks = append(chunks, chunk)
+		if streamContent && chunk != nil && chunk.Content != "" && len(chunk.ToolCalls) == 0 {
+			emit(Event{Type: "delta", Content: chunk.Content})
+			streamedContent = true
+		}
+	}
+	if len(chunks) == 0 {
+		return nil, streamedContent, nil
+	}
+	message, err := schema.ConcatMessages(chunks)
+	if err != nil {
+		return nil, streamedContent, err
+	}
+	return message, streamedContent, nil
 }
 
 func (r *Runner) loadOrderDefaults(ctx context.Context, requestID, conversationID, userID string, profile *businessv1.UserProfile) toolbuilder.OrderDefaults {
