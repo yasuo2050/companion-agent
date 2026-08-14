@@ -4,6 +4,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"sync/atomic"
@@ -26,6 +27,18 @@ type Event struct {
 	Content  string
 	Message  *schema.Message
 }
+
+var errOrderPresentationReady = errors.New("订单展示已就绪")
+
+func stopAfterOrderPresentation(presentation *atomic.Pointer[orderPresentation]) func(context.Context) error {
+	return func(context.Context) error {
+		if presentation.Load() != nil {
+			return errOrderPresentationReady
+		}
+		return nil
+	}
+}
+
 type Runner struct {
 	model         model.ToolCallingChatModel
 	business      *businessclient.Client
@@ -76,11 +89,23 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 		return nil, err
 	}
 	started := time.Now()
-	iterator := instance.Run(ctx, &adk.AgentInput{Messages: history, EnableStreaming: true})
+	iterator := instance.Run(ctx, &adk.AgentInput{Messages: history, EnableStreaming: true}, adk.WithAfterToolCallsHook(stopAfterOrderPresentation(&fixedPresentation)))
 	outputs := []*schema.Message{}
 	for {
 		event, ok := iterator.Next()
 		if !ok {
+			break
+		}
+		if errors.Is(event.Err, errOrderPresentationReady) {
+			presentation := fixedPresentation.Swap(nil)
+			if presentation == nil {
+				return outputs, errors.New("订单展示中止但模板不存在")
+			}
+			message := schema.AssistantMessage(presentation.Content, nil)
+			outputs = append(outputs, message)
+			emit(Event{Type: "delta", Content: message.Content})
+			emit(Event{Type: "message", Message: message})
+			flowlog.Info("订单工具成功后直接返回固定展示", "flow_step", "order_template_returned_directly", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "template_kind", presentation.Kind, "response", message.Content)
 			break
 		}
 		if event.Err != nil {
@@ -107,22 +132,13 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 		if message == nil {
 			continue
 		}
-		renderedByCode := false
 		if message.Role == schema.Assistant && len(message.ToolCalls) == 0 {
-			if presentation := fixedPresentation.Swap(nil); presentation != nil {
-				flowlog.Info("忽略大模型订单展示文案", "flow_step", "llm_order_response_ignored", "request_id", requestID, "conversation_id", conversationID, "user_id", userID)
-				message.Content = presentation.Content
-				renderedByCode = true
-				emit(Event{Type: "delta", Content: message.Content})
-				flowlog.Info("代码生成固定订单展示", "flow_step", "order_template_rendered", "request_id", requestID, "conversation_id", conversationID, "user_id", userID, "template_kind", presentation.Kind, "response", message.Content)
-			} else if message.Content != "" && !streamedContent {
+			if message.Content != "" && !streamedContent {
 				emit(Event{Type: "delta", Content: message.Content})
 			}
 		}
 		outputs = append(outputs, message)
-		if !renderedByCode {
-			logMessageFlow(requestID, conversationID, userID, llmIteration.Load(), message)
-		}
+		logMessageFlow(requestID, conversationID, userID, llmIteration.Load(), message)
 		if variant.Role != schema.Tool {
 			emit(Event{Type: "message", Message: message})
 		}

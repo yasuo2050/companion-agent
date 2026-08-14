@@ -29,7 +29,7 @@ tail -f logs/agent-flow.log
 
 AI Agent Runtime，负责 HTTP Chat API、SSE、Eino、Ark、Context Builder、4 个 Agent Tool、Business gRPC Client、Redis Conversation 和 Agent Trace。
 
-订单 Preview 和确认结果不使用大模型文案：Go 代码直接解析 ToolResult，完成分转元、Asia/Shanghai 时区转换和固定模板渲染后，再写入 SSE、Redis 与 Trace。结构化 ToolCall 参数不会作为文本 `delta` 发给前端；订单模板生成阶段也不会透传大模型订单文案。
+订单 Preview 和确认结果不使用大模型文案：Go 代码直接解析 ToolResult，完成分转元、Asia/Shanghai 时区转换和固定模板渲染后，再写入 SSE、Redis 与 Trace。成功生成 Draft 或确认 Order 后会在 ToolCalls 阶段直接结束本轮 Agent Loop，不再调用一次大模型生成必然被替换的文案；Tool 返回业务错误时仍会继续 Agent Loop。结构化 ToolCall 参数不会作为文本 `delta` 发给前端。
 
 边界：
 
