@@ -31,7 +31,7 @@ type toolTracePayload struct {
 }
 
 // logTurnTrace 从同一轮真实模型与 Tool 输出汇总可审计字段，不记录用户原文和密钥。
-func logTurnTrace(requestID, conversationID, userID, modelAlias string, duration time.Duration, outputs []*schema.Message) {
+func logTurnTrace(requestID, conversationID, userID, modelID string, duration time.Duration, outputs []*schema.Message) {
 	var inputTokens, outputTokens, totalTokens, llmIterations int
 	var candidateIDs, arkRequestIDs, toolErrorCodes []string
 	candidates := make([]tracedCandidate, 0)
@@ -85,7 +85,7 @@ func logTurnTrace(requestID, conversationID, userID, modelAlias string, duration
 	}
 	flowlog.Info("对话轮次汇总", "flow_step", "turn_summary",
 		"request_id", requestID, "conversation_id", conversationID, "user_id", userID,
-		"provider", "volcengine-ark", "model", modelAlias, "ark_request_ids", arkRequestIDs,
+		"provider", "volcengine-ark", "model", modelID, "ark_request_ids", arkRequestIDs,
 		"llm_iterations", llmIterations, "llm_duration_ms", duration.Milliseconds(),
 		"candidate_ids", candidateIDs, "recommended_companion_id", recommendedID,
 		"draft_id", draftID, "order_id", orderID, "tool_error_codes", toolErrorCodes,

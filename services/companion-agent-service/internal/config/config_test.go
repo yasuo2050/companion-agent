@@ -20,3 +20,16 @@ func TestLoadDoesNotRequireLLMForDeterministicComponents(t *testing.T) {
 		t.Fatalf("默认配置错误: %#v", cfg)
 	}
 }
+
+func TestLoadUsesArkModelIDAsModelIdentifier(t *testing.T) {
+	t.Setenv("ARK_API_KEY", "test-key")
+	t.Setenv("ARK_MODEL_ID", "doubao-seed-2-0-mini-260428")
+
+	cfg, err := Load(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ArkModelID != "doubao-seed-2-0-mini-260428" {
+		t.Fatalf("ARK_MODEL_ID 未正确加载: %q", cfg.ArkModelID)
+	}
+}

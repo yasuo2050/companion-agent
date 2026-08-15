@@ -51,14 +51,14 @@ func main() {
 		slog.Error("Redis 连接失败", "error", err)
 		os.Exit(1)
 	}
-	runner := agent.NewRunner(chatModel, business, cfg.MaxIterations, cfg.LLMModelAlias)
+	runner := agent.NewRunner(chatModel, business, cfg.MaxIterations, cfg.ArkModelID)
 	api := handler.NewHTTP(runner, conversations, business)
 	mux := http.NewServeMux()
 	api.Register(mux)
 	mux.Handle("GET /", http.FileServer(http.FS(webassets.Files)))
 	server := &http.Server{Addr: cfg.HTTPAddr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	go func() {
-		slog.Info("Companion Agent Service 已启动", "addr", cfg.HTTPAddr, "model", cfg.LLMModelAlias)
+		slog.Info("Companion Agent Service 已启动", "addr", cfg.HTTPAddr, "ark_model_id", cfg.ArkModelID)
 		if serveErr := server.ListenAndServe(); serveErr != nil && serveErr != http.ErrServerClosed {
 			slog.Error("HTTP 服务退出", "error", serveErr)
 		}

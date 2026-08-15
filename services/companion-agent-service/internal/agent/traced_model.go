@@ -14,12 +14,12 @@ type tracedModel struct {
 	requestID      string
 	conversationID string
 	userID         string
-	modelAlias     string
+	modelID        string
 	iteration      *atomic.Int64
 }
 
-func newTracedModel(delegate model.ToolCallingChatModel, requestID, conversationID, userID, modelAlias string, iteration *atomic.Int64) model.ToolCallingChatModel {
-	return &tracedModel{delegate: delegate, requestID: requestID, conversationID: conversationID, userID: userID, modelAlias: modelAlias, iteration: iteration}
+func newTracedModel(delegate model.ToolCallingChatModel, requestID, conversationID, userID, modelID string, iteration *atomic.Int64) model.ToolCallingChatModel {
+	return &tracedModel{delegate: delegate, requestID: requestID, conversationID: conversationID, userID: userID, modelID: modelID, iteration: iteration}
 }
 
 func (m *tracedModel) Generate(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.Message, error) {
@@ -45,7 +45,7 @@ func (m *tracedModel) WithTools(tools []*schema.ToolInfo) (model.ToolCallingChat
 	if err != nil {
 		return nil, err
 	}
-	return &tracedModel{delegate: bound, requestID: m.requestID, conversationID: m.conversationID, userID: m.userID, modelAlias: m.modelAlias, iteration: m.iteration}, nil
+	return &tracedModel{delegate: bound, requestID: m.requestID, conversationID: m.conversationID, userID: m.userID, modelID: m.modelID, iteration: m.iteration}, nil
 }
 
 func (m *tracedModel) logStart(input []*schema.Message, mode string) int64 {
@@ -54,7 +54,7 @@ func (m *tracedModel) logStart(input []*schema.Message, mode string) int64 {
 	if len(input) > 0 && input[len(input)-1] != nil {
 		triggerRole = string(input[len(input)-1].Role)
 	}
-	flowlog.Info("调用大模型", "flow_step", "llm_started", "request_id", m.requestID, "conversation_id", m.conversationID, "user_id", m.userID, "provider", "volcengine-ark", "model", m.modelAlias, "llm_iteration", iteration, "mode", mode, "message_count", len(input), "trigger_role", triggerRole)
+	flowlog.Info("调用大模型", "flow_step", "llm_started", "request_id", m.requestID, "conversation_id", m.conversationID, "user_id", m.userID, "provider", "volcengine-ark", "model", m.modelID, "llm_iteration", iteration, "mode", mode, "message_count", len(input), "trigger_role", triggerRole)
 	return iteration
 }
 

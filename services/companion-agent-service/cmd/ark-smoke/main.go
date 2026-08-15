@@ -30,7 +30,7 @@ func main() {
 	if err != nil {
 		fail("Ark 模型初始化失败", err)
 	}
-	slog.Info("开始 Ark Smoke", "model_alias", cfg.LLMModelAlias)
+	slog.Info("开始 Ark Smoke", "ark_model_id", cfg.ArkModelID)
 	started := time.Now()
 	generated, err := chatModel.Generate(ctx, []*schema.Message{schema.UserMessage("只回复：ok")})
 	if err != nil {

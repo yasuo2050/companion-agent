@@ -43,11 +43,11 @@ type Runner struct {
 	model         model.ToolCallingChatModel
 	business      *businessclient.Client
 	maxIterations int
-	modelAlias    string
+	modelID       string
 }
 
-func NewRunner(chatModel model.ToolCallingChatModel, business *businessclient.Client, maxIterations int, modelAlias string) *Runner {
-	return &Runner{model: chatModel, business: business, maxIterations: maxIterations, modelAlias: modelAlias}
+func NewRunner(chatModel model.ToolCallingChatModel, business *businessclient.Client, maxIterations int, modelID string) *Runner {
+	return &Runner{model: chatModel, business: business, maxIterations: maxIterations, modelID: modelID}
 }
 
 // Run 加载 Profile 后运行真实 Eino Agent Loop，并逐事件回调。
@@ -83,7 +83,7 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 		return nil, err
 	}
 	instruction := systemInstruction(profile, defaults, time.Now())
-	modelWithTrace := newTracedModel(r.model, requestID, conversationID, userID, r.modelAlias, &llmIteration)
+	modelWithTrace := newTracedModel(r.model, requestID, conversationID, userID, r.modelID, &llmIteration)
 	instance, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{Name: "companion-order-agent", Description: "游戏陪玩下单助手", Instruction: instruction, Model: modelWithTrace, ToolsConfig: adk.ToolsConfig{ToolsNodeConfig: compose.ToolsNodeConfig{Tools: tools}}, MaxIterations: r.maxIterations})
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 			emit(Event{Type: "message", Message: message})
 		}
 	}
-	logTurnTrace(requestID, conversationID, userID, r.modelAlias, time.Since(started), outputs)
+	logTurnTrace(requestID, conversationID, userID, r.modelID, time.Since(started), outputs)
 	return outputs, nil
 }
 

@@ -96,7 +96,6 @@ tail -f services/companion-agent-service/logs/agent-flow.log | grep 'conversatio
 | `ARK_API_KEY` | 无，必填 | Agent |
 | `ARK_MODEL_ID` | 无，必填 | Agent |
 | `ARK_BASE_URL` | `https://ark.cn-beijing.volces.com/api/v3` | Agent |
-| `LLM_MODEL_ALIAS` | `doubao-seed-2.1-turbo` | Agent Trace |
 | `LLM_MAX_TOKENS` | `2048` | Agent |
 | `LLM_TIMEOUT` | `30s` | Agent |
 | `LLM_RETRY_TIMES` | `1` | Agent |
@@ -153,7 +152,6 @@ tail -f ./services/companion-agent-service/logs/agent-flow.log
 go run ./services/mock-business-service/cmd/seed
 ## 重置数据
 go run ./services/mock-business-service/cmd/seed --reset
-
 
 
 

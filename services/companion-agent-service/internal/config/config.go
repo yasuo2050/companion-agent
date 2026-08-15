@@ -12,7 +12,7 @@ import (
 
 // Config 保存 Agent Service 的全部运行配置。
 type Config struct {
-	ArkAPIKey, ArkModelID, ArkBaseURL, LLMProvider, LLMModelAlias        string
+	ArkAPIKey, ArkModelID, ArkBaseURL, LLMProvider                       string
 	LLMMaxTokens, LLMRetryTimes, MaxIterations                           int
 	LLMTimeout                                                           time.Duration
 	HTTPAddr, BusinessGRPCAddr, RedisAddr, RedisPassword, RedisKeyPrefix string
@@ -26,7 +26,7 @@ func Load(requireLLM bool) (Config, error) {
 	if err := loadDotEnv(".env"); err != nil {
 		return Config{}, fmt.Errorf("加载 .env 失败: %w", err)
 	}
-	cfg := Config{ArkAPIKey: os.Getenv("ARK_API_KEY"), ArkModelID: os.Getenv("ARK_MODEL_ID"), ArkBaseURL: env("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"), LLMProvider: env("LLM_PROVIDER", "ark"), LLMModelAlias: env("LLM_MODEL_ALIAS", "doubao-seed-2.1-turbo"), HTTPAddr: env("AGENT_HTTP_ADDR", ":8080"), BusinessGRPCAddr: env("BUSINESS_GRPC_ADDR", "127.0.0.1:9090"), RedisAddr: env("REDIS_ADDR", "127.0.0.1:6379"), RedisPassword: os.Getenv("REDIS_PASSWORD"), RedisKeyPrefix: env("REDIS_KEY_PREFIX", "companion-agent:mvp:"), AgentFlowLogPath: env("AGENT_FLOW_LOG_PATH", "logs/agent-flow.log")}
+	cfg := Config{ArkAPIKey: os.Getenv("ARK_API_KEY"), ArkModelID: os.Getenv("ARK_MODEL_ID"), ArkBaseURL: env("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"), LLMProvider: env("LLM_PROVIDER", "ark"), HTTPAddr: env("AGENT_HTTP_ADDR", ":8080"), BusinessGRPCAddr: env("BUSINESS_GRPC_ADDR", "127.0.0.1:9090"), RedisAddr: env("REDIS_ADDR", "127.0.0.1:6379"), RedisPassword: os.Getenv("REDIS_PASSWORD"), RedisKeyPrefix: env("REDIS_KEY_PREFIX", "companion-agent:mvp:"), AgentFlowLogPath: env("AGENT_FLOW_LOG_PATH", "logs/agent-flow.log")}
 	var err error
 	if cfg.LLMMaxTokens, err = intValue("LLM_MAX_TOKENS", 2048); err != nil {
 		return Config{}, err
