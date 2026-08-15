@@ -26,6 +26,15 @@ type ChatRequest struct {
 	ConversationID string `json:"conversation_id"`
 	Message        string `json:"message"`
 }
+type HistoryMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+type HistoryResponse struct {
+	UserID         string           `json:"user_id"`
+	ConversationID string           `json:"conversation_id"`
+	Messages       []HistoryMessage `json:"messages"`
+}
 type HTTP struct {
 	runner        *agent.Runner
 	conversations *conversation.Repository
@@ -39,6 +48,7 @@ func NewHTTP(runner *agent.Runner, conversations *conversation.Repository, busin
 func (h *HTTP) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /healthz", h.health)
 	mux.HandleFunc("GET /readyz", h.ready)
+	mux.HandleFunc("GET /api/v1/conversations/{conversation_id}/messages", h.history)
 	mux.HandleFunc("POST /api/v1/agent/chat", h.chat)
 }
 func (h *HTTP) health(w http.ResponseWriter, _ *http.Request) {
@@ -56,6 +66,35 @@ func (h *HTTP) ready(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
+}
+func (h *HTTP) history(w http.ResponseWriter, r *http.Request) {
+	userID := strings.TrimSpace(r.URL.Query().Get("user_id"))
+	conversationID := strings.TrimSpace(r.PathValue("conversation_id"))
+	if userID == "" || conversationID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"code": "INVALID_REQUEST", "message": "user_id 和 conversation_id 均不能为空"})
+		return
+	}
+
+	lockValue, _ := h.locks.LoadOrStore(conversationID, &sync.Mutex{})
+	lock := lockValue.(*sync.Mutex)
+	lock.Lock()
+	defer lock.Unlock()
+
+	value, err := h.conversations.Load(r.Context(), userID, conversationID)
+	if err != nil {
+		if errors.Is(err, conversation.ErrOwnership) {
+			writeJSON(w, http.StatusForbidden, map[string]string{"code": "CONVERSATION_FORBIDDEN", "message": "该对话不属于当前用户"})
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"code": "CONVERSATION_LOAD_FAILED", "message": "对话加载失败"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, HistoryResponse{
+		UserID:         userID,
+		ConversationID: conversationID,
+		Messages:       displayMessages(value.Messages),
+	})
 }
 func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 	started := time.Now()
@@ -147,6 +186,23 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 	sendSSE(w, flusher, "done", map[string]any{"request_id": requestID})
 	slog.Info("Agent 延迟指标", "request_id", requestID, "conversation_id", request.ConversationID, "ttfe_ms", ttfe.Milliseconds(), "ttts_ms", durationMillis(ttts), "ttft_ms", durationMillis(ttft), "total_ms", time.Since(started).Milliseconds())
 	flowlog.Info("对话结束", "flow_step", "turn_completed", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "total_ms", time.Since(started).Milliseconds())
+}
+func displayMessages(values []conversation.MessageDTO) []HistoryMessage {
+	messages := make([]HistoryMessage, 0, len(values))
+	for _, value := range values {
+		content := strings.TrimSpace(value.Content)
+		if content == "" {
+			continue
+		}
+		if value.Role == string(schema.User) {
+			messages = append(messages, HistoryMessage{Role: "user", Content: value.Content})
+			continue
+		}
+		if value.Role == string(schema.Assistant) && len(value.ToolCalls) == 0 {
+			messages = append(messages, HistoryMessage{Role: "assistant", Content: value.Content})
+		}
+	}
+	return messages
 }
 func sendSSE(w http.ResponseWriter, flusher http.Flusher, event string, data any) {
 	raw, _ := json.Marshal(data)
