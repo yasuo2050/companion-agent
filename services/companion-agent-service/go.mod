@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	companion-agent/contracts/companion-business v0.0.0
-	github.com/cloudwego/eino v0.9.13
+	github.com/cloudwego/eino v0.9.14
 	github.com/cloudwego/eino-ext/components/model/ark v0.1.69
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/volcengine/volcengine-go-sdk v1.2.45
