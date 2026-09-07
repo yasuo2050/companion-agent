@@ -46,7 +46,7 @@ services:
       <<: *env
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?请先生成.env}
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/public/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD-SHELL", "node -e \"fetch('http://' + require('node:os').hostname() + ':3000/api/public/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 10s
       timeout: 5s
       retries: 30

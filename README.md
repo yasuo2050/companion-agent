@@ -8,6 +8,7 @@ services/mock-business-service    Mock 业务后台，持有 MongoDB 业务事�
 contracts/companion-business      两个服务唯一允许共享的 gRPC Contract
 experiments/profile-extraction    P1 只读画像提取实验
 test/e2e                          跨服务端到端测试
+deploy/langfuse                   同仓库、独立数据卷的本地观测部署
 ```
 
 两个服务不得共享 `internal` 实现，也不得绕过 gRPC 直接访问对方数据。根目录 `go.work` 只用于统一本地开发，不合并服务的构建和部署边界。
@@ -110,6 +111,12 @@ tail -f services/companion-agent-service/logs/agent-flow.log | grep 'conversatio
 | `REDIS_DB` | `0` | Agent / Seed Reset |
 | `REDIS_KEY_PREFIX` | `companion-agent:mvp:` | Agent / Seed Reset |
 | `CONVERSATION_TTL` | `24h` | Agent |
+| `LANGFUSE_ENABLED` | `false` | Agent 旁路观测 |
+| `LANGFUSE_HOST` | `http://127.0.0.1:3000` | Agent 旁路观测 |
+| `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` | 无，启用时必填 | Agent 旁路观测 |
+| `LANGFUSE_RELEASE` | `local-dev` | Agent 旁路观测 |
+
+Langfuse 的本地初始化、启停和排障见 [`deploy/langfuse/README.md`](deploy/langfuse/README.md)，接入边界与验收记录见 [`docs/langfuse接入与验收.md`](docs/langfuse接入与验收.md)。
 
 ## 测试
 
@@ -152,6 +159,5 @@ tail -f ./services/companion-agent-service/logs/agent-flow.log
 go run ./services/mock-business-service/cmd/seed
 ## 重置数据
 go run ./services/mock-business-service/cmd/seed --reset
-
 
 

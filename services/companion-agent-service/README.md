@@ -11,6 +11,8 @@ go run ./cmd/ark-smoke
 
 `.env` 不会被 Git 提交，同名系统环境变量的优先级更高。Smoke 命令依次验证真实 Generate、Stream、Tool Calling 和 Tool Result 回传，不会打印 API Key。
 
+可从 `.env.example` 复制配置模板。Langfuse 默认关闭；本地部署完成后再填写项目级 Key 并设置 `LANGFUSE_ENABLED=true`。详细启停和排障见 [`deploy/langfuse/README.md`](../../deploy/langfuse/README.md)。
+
 启动服务：
 
 ```bash
@@ -24,6 +26,8 @@ tail -f logs/agent-flow.log
 ```
 
 流水包含用户原文、大模型调用轮次、ToolCall/ToolResult、最终回复与耗时，并用 `request_id` 串联。通过 `AGENT_FLOW_LOG_PATH` 可修改默认的 `logs/agent-flow.log`。日志不包含 Ark API Key，但含本地对话与业务数据，不得对外分发。
+
+启用 Langfuse 后，`turn_observed` 会同时记录 trace ID。Langfuse 是旁路依赖，不加入 `/readyz`；平台不可用或配置无效不会阻止业务请求。
 
 页面地址为 `http://127.0.0.1:8080/`，就绪检查为 `GET /readyz`。SSE 事件固定为 `turn_started → status* → delta* → done`，失败时以 `error` 代替 `done`。普通回答的 `delta` 直接来自 LLM 文本 chunk，Runner 同时合并完整消息写入 Redis 与 Trace，不再等待全部 chunk 收完才一次性返回。
 
