@@ -13,6 +13,7 @@ import (
 	businessv1 "companion-agent/contracts/companion-business/gen"
 	businessclient "companion-agent/services/companion-agent-service/internal/client/business"
 	"companion-agent/services/companion-agent-service/internal/flowlog"
+	"companion-agent/services/companion-agent-service/internal/observability"
 	toolbuilder "companion-agent/services/companion-agent-service/internal/tool"
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/components/model"
@@ -28,12 +29,12 @@ type Event struct {
 	Message  *schema.Message
 }
 
-var errOrderPresentationReady = errors.New("订单展示已就绪")
+var errOrderPresentationReady = observability.ErrOrderPresentationReady
 
 func stopAfterOrderPresentation(presentation *atomic.Pointer[orderPresentation]) func(context.Context) error {
 	return func(context.Context) error {
-		if presentation.Load() != nil {
-			return errOrderPresentationReady
+		if value := presentation.Load(); value != nil {
+			return &observability.DirectReturn{Kind: value.Kind, Content: value.Content}
 		}
 		return nil
 	}
@@ -89,7 +90,10 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 		return nil, err
 	}
 	started := time.Now()
-	iterator := instance.Run(ctx, &adk.AgentInput{Messages: history, EnableStreaming: true}, adk.WithAfterToolCallsHook(stopAfterOrderPresentation(&fixedPresentation)))
+	options := append(observability.AgentOptions(ctx), adk.WithAfterToolCallsHook(stopAfterOrderPresentation(&fixedPresentation)))
+	// ADK Runner 才会注入 Agent 生命周期 Callback，直接 instance.Run 会跳过这一层。
+	execution := adk.NewRunner(ctx, adk.RunnerConfig{Agent: instance, EnableStreaming: true})
+	iterator := execution.Run(ctx, history, options...)
 	outputs := []*schema.Message{}
 	for {
 		event, ok := iterator.Next()

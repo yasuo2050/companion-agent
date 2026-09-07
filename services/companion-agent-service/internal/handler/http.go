@@ -18,6 +18,7 @@ import (
 	businessclient "companion-agent/services/companion-agent-service/internal/client/business"
 	"companion-agent/services/companion-agent-service/internal/conversation"
 	"companion-agent/services/companion-agent-service/internal/flowlog"
+	"companion-agent/services/companion-agent-service/internal/observability"
 	"github.com/cloudwego/eino/schema"
 )
 
@@ -36,6 +37,8 @@ type HistoryResponse struct {
 	Messages       []HistoryMessage `json:"messages"`
 }
 type HTTP struct {
+	tracer        observability.TurnTracer
+	modelID       string
 	runner        *agent.Runner
 	conversations *conversation.Repository
 	business      *businessclient.Client
@@ -43,8 +46,16 @@ type HTTP struct {
 }
 
 func NewHTTP(runner *agent.Runner, conversations *conversation.Repository, business *businessclient.Client) *HTTP {
-	return &HTTP{runner: runner, conversations: conversations, business: business}
+	return &HTTP{runner: runner, conversations: conversations, business: business, tracer: observability.Noop()}
 }
+
+// WithTracer 在服务启动时注入旁路观测，不改变已有 HTTP 接口。
+func (h *HTTP) WithTracer(tracer observability.TurnTracer, modelID string) *HTTP {
+	h.tracer = tracer
+	h.modelID = modelID
+	return h
+}
+
 func (h *HTTP) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /healthz", h.health)
 	mux.HandleFunc("GET /readyz", h.ready)
@@ -123,11 +134,27 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("X-Accel-Buffering", "no")
 	requestID := newRequestID()
+	traceCtx, turn := h.tracer.StartAgentTurn(r.Context(), observability.TurnInfo{RequestID: requestID, UserID: request.UserID, ConversationID: request.ConversationID, Input: request.Message, ModelID: h.modelID})
+	result := observability.TurnResult{Status: "error", ErrorCode: "TURN_INCOMPLETE"}
+	var finalText strings.Builder
+	defer func() {
+		result.Output = finalText.String()
+		if errors.Is(traceCtx.Err(), context.Canceled) {
+			result.Status = "cancelled"
+			result.ErrorCode = "REQUEST_CANCELLED"
+		}
+		if errors.Is(traceCtx.Err(), context.DeadlineExceeded) {
+			result.Status = "error"
+			result.ErrorCode = "REQUEST_TIMEOUT"
+		}
+		turn.End(result)
+		flowlog.Info("观测请求关联", "flow_step", "turn_observed", "request_id", requestID, "trace_id", observability.TraceID(traceCtx), "status", result.Status, "code", result.ErrorCode)
+	}()
 	flowlog.Info("对话开始", "flow_step", "turn_started", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "user_message", request.Message)
 	sendSSE(w, flusher, "turn_started", map[string]any{"request_id": requestID, "conversation_id": request.ConversationID})
 	ttfe := time.Since(started)
 	var ttts, ttft time.Duration
-	value, err := h.conversations.Load(r.Context(), request.UserID, request.ConversationID)
+	value, err := h.conversations.Load(traceCtx, request.UserID, request.ConversationID)
 	if err != nil {
 		code := "CONVERSATION_LOAD_FAILED"
 		message := "对话加载失败"
@@ -135,6 +162,7 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 			code = "CONVERSATION_FORBIDDEN"
 			message = "该对话不属于当前用户"
 		}
+		result.ErrorCode = code
 		sendSSE(w, flusher, "error", map[string]any{"request_id": requestID, "code": code, "message": message})
 		flowlog.Error("对话加载失败", "flow_step", "turn_failed", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "code", code, "error", err)
 		return
@@ -143,7 +171,7 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 	userMessage := schema.UserMessage(request.Message)
 	history = append(history, userMessage)
 	firstDelta := false
-	outputs, runErr := h.runner.Run(r.Context(), requestID, request.UserID, request.ConversationID, history, func(event agent.Event) {
+	outputs, runErr := h.runner.Run(traceCtx, requestID, request.UserID, request.ConversationID, history, func(event agent.Event) {
 		switch event.Type {
 		case "status":
 			if ttts == 0 {
@@ -156,11 +184,13 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 					ttft = time.Since(started)
 				}
 				firstDelta = true
+				finalText.WriteString(event.Content)
 				sendSSE(w, flusher, "delta", map[string]any{"request_id": requestID, "content": event.Content})
 			}
 		}
 	})
 	if runErr != nil {
+		result.ErrorCode = agentErrorCode(runErr)
 		slog.Error("Agent 运行失败", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "code", agentErrorCode(runErr), "error", runErr)
 		flowlog.Error("Agent 运行失败", "flow_step", "turn_failed", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "code", agentErrorCode(runErr), "error", runErr)
 		sendSSE(w, flusher, "error", map[string]any{"request_id": requestID, "code": agentErrorCode(runErr), "message": "Agent 暂时无法完成本次请求，请稍后重试"})
@@ -169,6 +199,7 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 	if !firstDelta {
 		for i := len(outputs) - 1; i >= 0; i-- {
 			if outputs[i].Role == schema.Assistant && outputs[i].Content != "" {
+				finalText.WriteString(outputs[i].Content)
 				sendSSE(w, flusher, "delta", map[string]any{"request_id": requestID, "content": outputs[i].Content})
 				break
 			}
@@ -178,11 +209,13 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 	for _, message := range outputs {
 		value.Messages = append(value.Messages, conversation.FromMessage(message))
 	}
-	if err := h.conversations.Save(r.Context(), value); err != nil {
+	if err := h.conversations.Save(traceCtx, value); err != nil {
+		result.ErrorCode = "CONVERSATION_SAVE_FAILED"
 		sendSSE(w, flusher, "error", map[string]any{"request_id": requestID, "code": "CONVERSATION_SAVE_FAILED", "message": "对话保存失败，请重试"})
 		flowlog.Error("对话保存失败", "flow_step", "turn_failed", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "code", "CONVERSATION_SAVE_FAILED", "error", err)
 		return
 	}
+	result.Status, result.ErrorCode = "success", ""
 	sendSSE(w, flusher, "done", map[string]any{"request_id": requestID})
 	slog.Info("Agent 延迟指标", "request_id", requestID, "conversation_id", request.ConversationID, "ttfe_ms", ttfe.Milliseconds(), "ttts_ms", durationMillis(ttts), "ttft_ms", durationMillis(ttft), "total_ms", time.Since(started).Milliseconds())
 	flowlog.Info("对话结束", "flow_step", "turn_completed", "request_id", requestID, "conversation_id", request.ConversationID, "user_id", request.UserID, "total_ms", time.Since(started).Milliseconds())

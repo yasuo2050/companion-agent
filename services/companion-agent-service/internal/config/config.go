@@ -12,6 +12,7 @@ import (
 
 // Config 保存 Agent Service 的全部运行配置。
 type Config struct {
+	Langfuse                                                             LangfuseConfig
 	ArkAPIKey, ArkModelID, ArkBaseURL, LLMProvider                       string
 	LLMMaxTokens, LLMRetryTimes, MaxIterations                           int
 	LLMTimeout                                                           time.Duration
@@ -52,6 +53,7 @@ func Load(requireLLM bool) (Config, error) {
 	if requireLLM && (cfg.ArkAPIKey == "" || cfg.ArkModelID == "") {
 		return Config{}, fmt.Errorf("ARK_API_KEY 和 ARK_MODEL_ID 必须通过 .env 或环境变量提供")
 	}
+	cfg.Langfuse = loadLangfuse()
 	return cfg, nil
 }
 

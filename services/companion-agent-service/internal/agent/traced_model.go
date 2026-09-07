@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 
 	"companion-agent/services/companion-agent-service/internal/flowlog"
+	"github.com/cloudwego/eino/components"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 )
@@ -60,4 +61,13 @@ func (m *tracedModel) logStart(input []*schema.Message, mode string) int64 {
 
 func (m *tracedModel) logError(iteration int64, err error) {
 	flowlog.Error("大模型调用失败", "flow_step", "llm_failed", "request_id", m.requestID, "conversation_id", m.conversationID, "user_id", m.userID, "llm_iteration", iteration, "error", err)
+}
+
+// IsCallbacksEnabled 透传底层埋点能力，避免框架再次包装 Ark 导致重复计数。
+func (m *tracedModel) IsCallbacksEnabled() bool { return components.IsCallbacksEnabled(m.delegate) }
+func (m *tracedModel) GetType() string {
+	if value, ok := components.GetType(m.delegate); ok {
+		return value
+	}
+	return "ChatModel"
 }

@@ -16,6 +16,7 @@ import (
 	"companion-agent/services/companion-agent-service/internal/flowlog"
 	"companion-agent/services/companion-agent-service/internal/handler"
 	llmfactory "companion-agent/services/companion-agent-service/internal/llm"
+	"companion-agent/services/companion-agent-service/internal/observability"
 	webassets "companion-agent/services/companion-agent-service/web"
 )
 
@@ -52,7 +53,8 @@ func main() {
 		os.Exit(1)
 	}
 	runner := agent.NewRunner(chatModel, business, cfg.MaxIterations, cfg.ArkModelID)
-	api := handler.NewHTTP(runner, conversations, business)
+	tracer := observability.New(context.Background(), cfg.Langfuse, cfg.ArkAPIKey, cfg.RedisPassword)
+	api := handler.NewHTTP(runner, conversations, business).WithTracer(tracer, cfg.ArkModelID)
 	mux := http.NewServeMux()
 	api.Register(mux)
 	mux.Handle("GET /", http.FileServer(http.FS(webassets.Files)))
@@ -68,5 +70,12 @@ func main() {
 	<-signals
 	shutdown, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelShutdown()
-	_ = server.Shutdown(shutdown)
+	if err := server.Shutdown(shutdown); err != nil {
+		_ = server.Close()
+	}
+	observationCtx, stopObservation := context.WithTimeout(context.Background(), 5*time.Second)
+	defer stopObservation()
+	if err := tracer.Shutdown(observationCtx); err != nil {
+		slog.Warn("观测关闭超时或失败，未导出数据可能丢失")
+	}
 }
