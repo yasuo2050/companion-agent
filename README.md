@@ -11,7 +11,7 @@ test/e2e                          跨服务端到端测试
 deploy/langfuse                   同仓库、独立数据卷的本地观测部署
 ```
 
-两个服务不得共享 `internal` 实现，也不得绕过 gRPC 直接访问对方数据。根目录 `go.work` 只用于统一本地开发，不合并服务的构建和部署边界。
+两个服务不得共享 `internal` 实现，也不得绕过 gRPC 直接访问对方数据。仓库不使用 `go.work` 合并依赖图；每个 Module 独立解析依赖、构建和测试，避免旁路观测依赖改变其他服务的版本选择。
 
 ## 开发语言规范
 
@@ -120,12 +120,12 @@ Langfuse 的本地初始化、启停和排障见 [`deploy/langfuse/README.md`](d
 
 ## 测试
 
-每个 Module 可脱离 `go.work` 独立验证：
+进入每个 Module 的目录独立验证：
 
 ```bash
-cd contracts/companion-business && GOWORK=off go test ./...
-cd services/mock-business-service && GOWORK=off go test ./... && GOWORK=off go test -race ./...
-cd services/companion-agent-service && GOWORK=off go test ./... && GOWORK=off go test -race ./...
+cd contracts/companion-business && go test ./...
+cd services/mock-business-service && go test ./... && go test -race ./...
+cd services/companion-agent-service && go test ./... && go test -race ./...
 ```
 
 两个服务启动且执行干净 Seed 后，运行真实黑盒 E2E：
@@ -159,5 +159,3 @@ tail -f ./services/companion-agent-service/logs/agent-flow.log
 go run ./services/mock-business-service/cmd/seed
 ## 重置数据
 go run ./services/mock-business-service/cmd/seed --reset
-
-
