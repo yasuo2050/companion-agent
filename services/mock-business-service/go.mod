@@ -6,7 +6,7 @@ require (
 	companion-agent/contracts/companion-business v0.0.0
 	github.com/redis/go-redis/v9 v9.22.0
 	go.mongodb.org/mongo-driver/v2 v2.8.0
-	google.golang.org/grpc v1.53.0
+	google.golang.org/grpc v1.75.0
 	google.golang.org/protobuf v1.36.12
 )
 
@@ -14,7 +14,6 @@ replace companion-agent/contracts/companion-business => ../../contracts/companio
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
@@ -27,5 +26,5 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
-	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250825161204-c5933d9347a5 // indirect
 )

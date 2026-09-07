@@ -7,3 +7,6 @@ use (
 	./services/mock-business-service
 	./test/e2e
 )
+
+// 工作区同时包含旧依赖链与已拆分的 googleapis 子模块，统一到拆分后的根模块以避免重叠包。
+replace google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 => google.golang.org/genproto v0.0.0-20250825161204-c5933d9347a5
