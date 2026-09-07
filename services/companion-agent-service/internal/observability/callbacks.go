@@ -182,5 +182,31 @@ func observationOutput(info *callbacks.RunInfo, value callbacks.CallbackOutput) 
 			return &model.CallbackOutput{Message: observationMessage(out.Message), Config: out.Config, TokenUsage: out.TokenUsage}
 		}
 	}
-	return value
+	return observationValue(value)
+}
+
+// observationValue 为框架内部节点复制消息并丢弃内部 Extra。
+// Eino 会在 Tool 流进入后续节点时补写消息 ID，观测端不能并发序列化同一个 map。
+func observationValue(value callbacks.CallbackOutput) callbacks.CallbackOutput {
+	switch typed := value.(type) {
+	case *schema.Message:
+		return observationMessage(typed)
+	case []*schema.Message:
+		copied := make([]*schema.Message, len(typed))
+		for index, message := range typed {
+			copied[index] = observationMessage(message)
+		}
+		return copied
+	case []schema.Message:
+		copied := make([]schema.Message, len(typed))
+		for index := range typed {
+			message := observationMessage(&typed[index])
+			if message != nil {
+				copied[index] = *message
+			}
+		}
+		return copied
+	default:
+		return value
+	}
 }

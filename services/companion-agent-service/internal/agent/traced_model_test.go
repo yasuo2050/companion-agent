@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/cloudwego/eino/components"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 )
@@ -29,6 +30,8 @@ func (m *stubToolCallingModel) WithTools([]*schema.ToolInfo) (model.ToolCallingC
 	m.withToolsCalls++
 	return m, nil
 }
+func (m *stubToolCallingModel) IsCallbacksEnabled() bool { return true }
+func (m *stubToolCallingModel) GetType() string          { return "Stub" }
 
 func TestTracedModelCountsRealModelCallsAndPreservesBinding(t *testing.T) {
 	delegate := &stubToolCallingModel{}
@@ -51,5 +54,13 @@ func TestTracedModelCountsRealModelCallsAndPreservesBinding(t *testing.T) {
 	}
 	if iteration.Load() != 3 || delegate.generateCalls != 2 || delegate.streamCalls != 1 || delegate.withToolsCalls != 1 {
 		t.Fatalf("调用计数不符合预期: iteration=%d generate=%d stream=%d with_tools=%d", iteration.Load(), delegate.generateCalls, delegate.streamCalls, delegate.withToolsCalls)
+	}
+	for name, candidate := range map[string]model.ToolCallingChatModel{"未绑定": wrapped, "绑定工具后": bound} {
+		if !components.IsCallbacksEnabled(candidate) {
+			t.Fatalf("%s未透传 Callback 能力", name)
+		}
+		if got, ok := components.GetType(candidate); !ok || got != "Stub" {
+			t.Fatalf("%s模型类型=%q, %v", name, got, ok)
+		}
 	}
 }
