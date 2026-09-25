@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>陪玩下单 Agent</title>
+  <title>陪玩 Agent × RAG</title>
   <style>
     body{margin:0;background:#111827;color:#f9fafb;font:16px system-ui}
     .app{max-width:760px;margin:auto;padding:24px}
@@ -21,14 +21,19 @@
     input,button{border:1px solid #4b5563;background:#111827;color:#fff;border-radius:10px;padding:11px}
     button{background:#7c3aed;cursor:pointer}
     button:disabled{opacity:.5}
+    .citations{font-size:13px;color:#c4b5fd;display:flex;flex-wrap:wrap;gap:8px;margin:5px 0}
+    .citations button{font-size:13px;padding:5px 8px;background:#312e81}
   </style>
 </head>
 <body>
   <main class="app">
-    <h1>陪玩下单 Agent</h1>
+    <h1>陪玩 Agent × RAG</h1>
     <section class="panel">
       <div class="toolbar">
+        <select id="tenant" aria-label="租户"><option value="demo-a">演示租户 A</option><option value="demo-b">演示租户 B</option></select>
         <input id="user" value="10001" aria-label="用户 ID">
+        <input id="password" type="password" placeholder="演示密码" aria-label="演示密码">
+        <button id="login" type="button">登录</button>
         <input id="conversation" value="demo-001" aria-label="对话 ID">
         <button id="restore" type="button">恢复上下文</button>
       </div>
@@ -45,7 +50,21 @@
     const sendButton=document.querySelector('#send');
     const restoreButton=document.querySelector('#restore');
     const userInput=document.querySelector('#user');
+    const tenantInput=document.querySelector('#tenant');
+    const passwordInput=document.querySelector('#password');
+    const loginButton=document.querySelector('#login');
     const conversationInput=document.querySelector('#conversation');
+    const knowledgeURL='http://127.0.0.1:8082';
+    let token=sessionStorage.getItem('companion_token')||'';
+    loginButton.textContent=token?'已登录':'登录';
+    tenantInput.addEventListener('change',()=>{userInput.value=tenantInput.value==='demo-a'?'10001':'b-10001';token='';sessionStorage.removeItem('companion_token');loginButton.textContent='登录'});
+    loginButton.addEventListener('click',async()=>{
+      try{
+        const response=await fetch(knowledgeURL+'/api/v1/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tenant_id:tenantInput.value,user_id:userInput.value.trim(),password:passwordInput.value})});
+        if(!response.ok)throw new Error('登录失败，请检查身份和演示密码');
+        const value=await response.json();token=value.token;sessionStorage.setItem('companion_token',token);passwordInput.value='';loginButton.textContent='已登录';add('已使用 '+value.principal.role+' 身份登录','status');
+      }catch(error){add(error.message,'status')}
+    });
 
     function add(text,kind){
       const el=document.createElement('div');
@@ -68,15 +87,15 @@
     restoreButton.addEventListener('click',async()=>{
       const userID=userInput.value.trim();
       const conversationID=conversationInput.value.trim();
-      if(!userID||!conversationID){
-        add('请先填写用户 ID 和对话 ID','status');
+      if(!token||!conversationID){
+        add('请先登录并填写对话 ID','status');
         return;
       }
       restoreButton.disabled=true;
       sendButton.disabled=true;
       try{
-        const path='/api/v1/conversations/'+encodeURIComponent(conversationID)+'/messages?user_id='+encodeURIComponent(userID);
-        const response=await fetch(path);
+        const path='/api/v1/conversations/'+encodeURIComponent(conversationID)+'/messages';
+        const response=await fetch(path,{headers:{Authorization:'Bearer '+token}});
         if(!response.ok)throw new Error(await readError(response));
         const value=await response.json();
         box.replaceChildren();
@@ -96,6 +115,7 @@
       const input=document.querySelector('#message');
       const text=input.value.trim();
       if(!text)return;
+      if(!token){add('请先登录','status');return}
       add(text,'user');
       input.value='';
       sendButton.disabled=true;
@@ -105,8 +125,8 @@
       try{
         const response=await fetch('/api/v1/agent/chat',{
           method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({user_id:userInput.value,conversation_id:conversationInput.value,message:text})
+          headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+          body:JSON.stringify({conversation_id:conversationInput.value,message:text})
         });
         if(!response.ok)throw new Error(await response.text());
         const reader=response.body.getReader();
@@ -126,6 +146,11 @@
             }
             if(type==='status')status.textContent=data.message;
             if(type==='delta')answer.textContent+=data.content;
+            if(type==='citations'&&Array.isArray(data.citations)&&data.citations.length){
+              const refs=document.createElement('div');refs.className='citations';
+              for(const item of data.citations){const b=document.createElement('button');b.type='button';b.textContent=item.title+' V'+item.version+' · '+item.segment_id.slice(0,8);b.onclick=async()=>{const res=await fetch(knowledgeURL+item.url,{headers:{Authorization:'Bearer '+token}});const source=await res.json();alert(res.ok?source.content:(source.error||'来源不可访问'))};refs.append(b)}
+              answer.after(refs);
+            }
             if(type==='done')status.textContent='完成';
             if(type==='error')throw new Error(data.message);
           }

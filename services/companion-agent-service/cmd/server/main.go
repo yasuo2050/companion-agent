@@ -26,6 +26,10 @@ func main() {
 		slog.Error("配置加载失败", "error", err)
 		os.Exit(1)
 	}
+	if len(cfg.KnowledgeJWTSecret) < 32 {
+		slog.Error("KNOWLEDGE_JWT_SECRET 必须与知识服务一致且不少于 32 字节")
+		os.Exit(1)
+	}
 	flowFile, flowPath, err := flowlog.Configure(cfg.AgentFlowLogPath)
 	if err != nil {
 		slog.Error("对话流水日志初始化失败", "path", cfg.AgentFlowLogPath, "error", err)
@@ -52,9 +56,9 @@ func main() {
 		slog.Error("Redis 连接失败", "error", err)
 		os.Exit(1)
 	}
-	runner := agent.NewRunner(chatModel, business, cfg.MaxIterations, cfg.ArkModelID)
+	runner := agent.NewRunner(chatModel, business, cfg.MaxIterations, cfg.ArkModelID).WithKnowledgeURL(cfg.KnowledgeURL)
 	tracer := observability.New(context.Background(), cfg.Langfuse, cfg.ArkAPIKey, cfg.RedisPassword)
-	api := handler.NewHTTP(runner, conversations, business).WithTracer(tracer, cfg.ArkModelID)
+	api := handler.NewHTTP(runner, conversations, business).WithTracer(tracer, cfg.ArkModelID).WithIdentitySecret(cfg.KnowledgeJWTSecret)
 	mux := http.NewServeMux()
 	api.Register(mux)
 	mux.Handle("GET /", http.FileServer(http.FS(webassets.Files)))

@@ -39,6 +39,13 @@ func (h *GRPC) GetRecentOrders(ctx context.Context, req *businessv1.GetRecentOrd
 	}
 	return &businessv1.GetRecentOrdersResponse{Orders: out}, nil
 }
+func (h *GRPC) GetOrder(ctx context.Context, req *businessv1.GetOrderRequest) (*businessv1.GetOrderResponse, error) {
+	v, err := h.service.GetOrder(ctx, req.GetUserId(), req.GetOrderId())
+	if err != nil {
+		return &businessv1.GetOrderResponse{Error: toError(err)}, nil
+	}
+	return &businessv1.GetOrderResponse{Order: toOrder(v)}, nil
+}
 func (h *GRPC) SearchCompanions(ctx context.Context, req *businessv1.SearchCompanionsRequest) (*businessv1.SearchCompanionsResponse, error) {
 	var startTime time.Time
 	if req.GetStartTime() != nil {

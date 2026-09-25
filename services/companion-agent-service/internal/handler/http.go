@@ -18,6 +18,7 @@ import (
 	businessclient "companion-agent/services/companion-agent-service/internal/client/business"
 	"companion-agent/services/companion-agent-service/internal/conversation"
 	"companion-agent/services/companion-agent-service/internal/flowlog"
+	"companion-agent/services/companion-agent-service/internal/identity"
 	"companion-agent/services/companion-agent-service/internal/observability"
 	"github.com/cloudwego/eino/schema"
 )
@@ -37,12 +38,29 @@ type HistoryResponse struct {
 	Messages       []HistoryMessage `json:"messages"`
 }
 type HTTP struct {
-	tracer        observability.TurnTracer
-	modelID       string
-	runner        *agent.Runner
-	conversations *conversation.Repository
-	business      *businessclient.Client
-	locks         sync.Map
+	tracer         observability.TurnTracer
+	modelID        string
+	runner         *agent.Runner
+	conversations  *conversation.Repository
+	business       *businessclient.Client
+	locks          sync.Map
+	identitySecret string
+}
+
+func (h *HTTP) WithIdentitySecret(secret string) *HTTP { h.identitySecret = secret; return h }
+func (h *HTTP) verified(r *http.Request) (identity.Principal, string, bool) {
+	if h.identitySecret == "" {
+		return identity.Principal{}, "", false
+	}
+	parts := strings.Fields(r.Header.Get("Authorization"))
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return identity.Principal{}, "", false
+	}
+	p, err := identity.Verify(h.identitySecret, parts[1])
+	if err != nil {
+		return identity.Principal{}, "", false
+	}
+	return p, parts[1], true
 }
 
 func NewHTTP(runner *agent.Runner, conversations *conversation.Repository, business *businessclient.Client) *HTTP {
@@ -79,19 +97,25 @@ func (h *HTTP) ready(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 func (h *HTTP) history(w http.ResponseWriter, r *http.Request) {
-	userID := strings.TrimSpace(r.URL.Query().Get("user_id"))
+	verifiedUser, _, ok := h.verified(r)
+	if !ok {
+		writeJSON(w, 401, map[string]string{"code": "UNAUTHORIZED"})
+		return
+	}
+	userID := verifiedUser.TenantID + ":" + verifiedUser.UserID
 	conversationID := strings.TrimSpace(r.PathValue("conversation_id"))
-	if userID == "" || conversationID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"code": "INVALID_REQUEST", "message": "user_id 和 conversation_id 均不能为空"})
+	if conversationID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"code": "INVALID_REQUEST", "message": "conversation_id 不能为空"})
 		return
 	}
 
-	lockValue, _ := h.locks.LoadOrStore(conversationID, &sync.Mutex{})
+	storageID := verifiedUser.TenantID + ":" + conversationID
+	lockValue, _ := h.locks.LoadOrStore(storageID, &sync.Mutex{})
 	lock := lockValue.(*sync.Mutex)
 	lock.Lock()
 	defer lock.Unlock()
 
-	value, err := h.conversations.Load(r.Context(), userID, conversationID)
+	value, err := h.conversations.Load(r.Context(), userID, storageID)
 	if err != nil {
 		if errors.Is(err, conversation.ErrOwnership) {
 			writeJSON(w, http.StatusForbidden, map[string]string{"code": "CONVERSATION_FORBIDDEN", "message": "该对话不属于当前用户"})
@@ -102,7 +126,7 @@ func (h *HTTP) history(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, HistoryResponse{
-		UserID:         userID,
+		UserID:         verifiedUser.UserID,
 		ConversationID: conversationID,
 		Messages:       displayMessages(value.Messages),
 	})
@@ -114,11 +138,19 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"code": "INVALID_REQUEST", "message": "请求格式无效"})
 		return
 	}
-	request.UserID = strings.TrimSpace(request.UserID)
+	verifiedUser, token, authorized := h.verified(r)
+	if !authorized {
+		writeJSON(w, 401, map[string]string{"code": "UNAUTHORIZED"})
+		return
+	}
+	request.UserID = verifiedUser.UserID
+	ownerID := verifiedUser.TenantID + ":" + verifiedUser.UserID
+	r = r.WithContext(identity.WithToken(r.Context(), token))
 	request.ConversationID = strings.TrimSpace(request.ConversationID)
+	storageID := verifiedUser.TenantID + ":" + request.ConversationID
 	request.Message = strings.TrimSpace(request.Message)
-	if request.UserID == "" || request.ConversationID == "" || request.Message == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"code": "INVALID_REQUEST", "message": "user_id、conversation_id 和 message 均不能为空"})
+	if request.ConversationID == "" || request.Message == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"code": "INVALID_REQUEST", "message": "conversation_id 和 message 均不能为空"})
 		return
 	}
 	flusher, ok := w.(http.Flusher)
@@ -126,7 +158,7 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"code": "STREAM_UNSUPPORTED"})
 		return
 	}
-	lockValue, _ := h.locks.LoadOrStore(request.ConversationID, &sync.Mutex{})
+	lockValue, _ := h.locks.LoadOrStore(storageID, &sync.Mutex{})
 	lock := lockValue.(*sync.Mutex)
 	lock.Lock()
 	defer lock.Unlock()
@@ -154,7 +186,7 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 	sendSSE(w, flusher, "turn_started", map[string]any{"request_id": requestID, "conversation_id": request.ConversationID})
 	ttfe := time.Since(started)
 	var ttts, ttft time.Duration
-	value, err := h.conversations.Load(traceCtx, request.UserID, request.ConversationID)
+	value, err := h.conversations.Load(traceCtx, ownerID, storageID)
 	if err != nil {
 		code := "CONVERSATION_LOAD_FAILED"
 		message := "对话加载失败"
@@ -187,6 +219,8 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 				finalText.WriteString(event.Content)
 				sendSSE(w, flusher, "delta", map[string]any{"request_id": requestID, "content": event.Content})
 			}
+		case "citations":
+			sendSSE(w, flusher, "citations", map[string]any{"request_id": requestID, "citations": event.Citations})
 		}
 	})
 	if runErr != nil {
@@ -248,7 +282,7 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 	_ = json.NewEncoder(w).Encode(value)
 }
 func toolStatus(name string) string {
-	values := map[string]string{"get_recent_orders": "正在查看你之前的订单…", "search_companions": "正在确认陪玩档期…", "create_order_draft": "正在为你创建订单预览…", "confirm_order": "正在确认订单…"}
+	values := map[string]string{"get_recent_orders": "正在查看你之前的订单…", "get_order": "正在查询订单…", "search_knowledge": "正在检索知识资料…", "search_companions": "正在确认陪玩档期…", "create_order_draft": "正在为你创建订单预览…", "confirm_order": "正在确认订单…"}
 	if value := values[name]; value != "" {
 		return value
 	}

@@ -9,7 +9,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
-func TestHistoryRequiresUserID(t *testing.T) {
+func TestHistoryRequiresToken(t *testing.T) {
 	handler := NewHTTP(nil, nil, nil)
 	mux := http.NewServeMux()
 	handler.Register(mux)
@@ -18,8 +18,8 @@ func TestHistoryRequiresUserID(t *testing.T) {
 
 	mux.ServeHTTP(response, request)
 
-	if response.Code != http.StatusBadRequest {
-		t.Fatalf("状态码 = %d，期望 %d", response.Code, http.StatusBadRequest)
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("状态码 = %d，期望 %d", response.Code, http.StatusUnauthorized)
 	}
 }
 

@@ -1,4 +1,6 @@
-# 陪玩下单 Agent MVP
+# 陪玩下单 Agent 与知识问答
+
+RAG 知识平台、完整本机 Compose、演示身份和跨服务评测位于并列仓库 [`../companion-ai-knowledge-platform`](../companion-ai-knowledge-platform/README.md)。本仓库保留原有 Draft/Confirm 下单链路，并新增签名身份、知识检索工具、只读订单查询和 SSE 引用事件。
 
 本仓库采用 Service-first Go Monorepo。仓库内有两个常驻后端服务、一个共享协议模块和一个 P1 实验模块：
 
@@ -26,6 +28,9 @@ deploy/langfuse                   同仓库、独立数据卷的本地观测部�
 Chat UI → HTTP POST + SSE → Eino ChatModelAgent → Ark LLM 自主 Tool Calling
 → Go Tool → gRPC → Mock Business Service → MongoDB
 → Draft Preview → 用户明确确认 → Mock Order
+
+                        ↘ search_knowledge → Knowledge Service → Dify 已授权片段
+                        ↘ get_order → Business Service 只读校验订单归属
 ```
 
 Redis 保存完整 User / Assistant ToolCall / ToolResult / Assistant Final 消息并刷新 24 小时 TTL；MongoDB 保存画像、陪玩、历史订单、Draft 和 Order。
@@ -36,10 +41,15 @@ Redis 保存完整 User / Assistant ToolCall / ToolResult / Assistant Final 消�
 - MongoDB：`127.0.0.1:27017`
 - Redis：`127.0.0.1:6379`
 - 已开通的火山方舟模型与 API Key
+- 并列的 Knowledge Service 与同一 `KNOWLEDGE_JWT_SECRET`；聊天请求必须携带演示登录签发的 Bearer 令牌
 
 默认数据库固定为 `companion_agent_mvp`，Redis Key 前缀固定为 `companion-agent:mvp:`。`seed --reset` 只删除这两个范围，不执行 `FLUSHDB`。
 
 ## 从干净环境启动
+
+完整演示请先按 [知识平台启动说明](../companion-ai-knowledge-platform/README.md)运行 `../companion-ai-knowledge-platform/scripts/start.sh`。该脚本启动 MongoDB、Redis、业务服务、Agent、知识服务、管理台与 Dify，并装载演示订单。聊天页使用知识平台 `.env` 中的演示登录密码；Agent 只使用令牌身份，请求体中的 `user_id` 不参与授权。
+
+若单独启动本仓库，先确保知识服务已运行，再按下列步骤启动业务服务与 Agent；Agent 模块的 `.env` 还需填写与知识平台一致的 `KNOWLEDGE_JWT_SECRET` 和 `KNOWLEDGE_API_URL=http://127.0.0.1:8082`。
 
 终端一，在 Mock Business Module 中恢复 Demo 数据并启动 gRPC：
 
@@ -56,6 +66,8 @@ cd services/companion-agent-service
 # .env 内填写：
 # ARK_API_KEY=<本地 Ark Key>
 # ARK_MODEL_ID=doubao-seed-2-1-turbo-260628
+# KNOWLEDGE_JWT_SECRET=<与知识平台相同的签名密钥>
+# KNOWLEDGE_API_URL=http://127.0.0.1:8082
 ```
 
 之后可直接启动，无需重复 `export`：
@@ -65,7 +77,7 @@ go run ./cmd/ark-smoke
 go run ./cmd/server
 ```
 
-打开 [http://127.0.0.1:8080/](http://127.0.0.1:8080/)，使用 `10001`、`10002`、`10003` 可演示不同画像推荐。
+打开 [http://127.0.0.1:8080/](http://127.0.0.1:8080/)，以租户 A 的 `10001`、`10002`、`10003` 等演示身份登录。
 
 健康检查：
 
@@ -96,6 +108,8 @@ tail -f services/companion-agent-service/logs/agent-flow.log | grep 'conversatio
 |---|---|---|
 | `ARK_API_KEY` | 无，必填 | Agent |
 | `ARK_MODEL_ID` | 无，必填 | Agent |
+| `KNOWLEDGE_JWT_SECRET` | 无，必填且至少 32 字节 | Agent 身份验签 |
+| `KNOWLEDGE_API_URL` | `http://127.0.0.1:8082` | Agent 知识工具 |
 | `ARK_BASE_URL` | `https://ark.cn-beijing.volces.com/api/v3` | Agent |
 | `LLM_MAX_TOKENS` | `2048` | Agent |
 | `LLM_TIMEOUT` | `30s` | Agent |
@@ -135,27 +149,8 @@ cd test/e2e
 E2E_BASE_URL=http://127.0.0.1:8080 go test -tags=integration -count=1 -v
 ```
 
-E2E 会真实访问 Ark，并在 MongoDB 创建可重置的 Draft/Order。默认单元测试不访问外部模型。
+E2E 会从并列知识平台的本机 `.env` 获取演示登录密码并换取令牌，真实访问 Ark，并在 MongoDB 创建可重置的 Draft/Order。若配置文件路径不同，设置 `E2E_KNOWLEDGE_ENV`；也可设置 `E2E_DEMO_PASSWORD`。默认单元测试不访问外部模型。
 
 ## 安全说明
 
 项目启动时会读取 Agent 模块当前目录的 `.env`，同名系统环境变量优先。`.env` 已被 Git 忽略，不得提交或对外分发。API Key 不写入代码、README、MongoDB、Redis、Trace、测试快照或前端。本地对话流水会记录用户原文、Tool 参数和业务结果，日志目录也已忽略提交。
-
-
-
--------------------------------------------------
-http://127.0.0.1:8080/
-
-# 启动 Agent 服务
-cd services/companion-agent-service && go run ./cmd/server
-
-# 启动 Business 服务
-cd services/mock-business-service && go run ./cmd/server
-
-# 看操作日志
-tail -f ./services/companion-agent-service/logs/agent-flow.log
-
-# 初始化测试数据
-go run ./services/mock-business-service/cmd/seed
-## 重置数据
-go run ./services/mock-business-service/cmd/seed --reset

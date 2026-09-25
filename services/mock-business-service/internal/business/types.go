@@ -111,6 +111,7 @@ type CreateDraftInput struct {
 type Store interface {
 	GetProfile(context.Context, string) (UserProfile, error)
 	RecentOrders(context.Context, string, int32) ([]Order, error)
+	GetOrder(context.Context, string, string) (Order, error)
 	ListCompanions(context.Context) ([]Companion, error)
 	GetCompanion(context.Context, string) (Companion, error)
 	HasConfirmedOverlap(context.Context, string, time.Time, time.Time) (bool, error)

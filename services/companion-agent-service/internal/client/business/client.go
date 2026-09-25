@@ -67,6 +67,11 @@ func (c *Client) GetRecentOrders(ctx context.Context, request *businessv1.GetRec
 	defer cancel()
 	return c.api.GetRecentOrders(call, request)
 }
+func (c *Client) GetOrder(ctx context.Context, request *businessv1.GetOrderRequest) (*businessv1.GetOrderResponse, error) {
+	call, cancel := c.withTimeout(ctx)
+	defer cancel()
+	return c.api.GetOrder(call, request)
+}
 func (c *Client) SearchCompanions(ctx context.Context, request *businessv1.SearchCompanionsRequest) (*businessv1.SearchCompanionsResponse, error) {
 	started := time.Now()
 	defer func() {

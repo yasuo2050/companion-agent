@@ -42,6 +42,16 @@ func (s *Service) GetRecentOrders(ctx context.Context, userID string, limit int3
 	}
 	return s.store.RecentOrders(ctx, userID, limit)
 }
+func (s *Service) GetOrder(ctx context.Context, userID, orderID string) (Order, error) {
+	if userID == "" || orderID == "" {
+		return Order{}, biz("INVALID_ARGUMENT", "订单 ID 不能为空", false, nil)
+	}
+	v, err := s.store.GetOrder(ctx, userID, orderID)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return Order{}, biz("ORDER_NOT_FOUND", "订单不存在或不属于当前用户", false, nil)
+	}
+	return v, err
+}
 
 // SearchCompanions 查询满足明确硬条件的稳定候选集合。
 func (s *Service) SearchCompanions(ctx context.Context, in SearchInput) ([]Candidate, error) {

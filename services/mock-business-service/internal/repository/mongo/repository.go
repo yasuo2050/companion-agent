@@ -73,6 +73,11 @@ func (r *Repository) RecentOrders(ctx context.Context, userID string, limit int3
 	err = cur.All(ctx, &values)
 	return values, err
 }
+func (r *Repository) GetOrder(ctx context.Context, userID, orderID string) (business.Order, error) {
+	var value business.Order
+	err := r.db.Collection("orders").FindOne(ctx, bson.M{"_id": orderID, "user_id": userID}).Decode(&value)
+	return value, err
+}
 func (r *Repository) ListCompanions(ctx context.Context) ([]business.Companion, error) {
 	cur, err := r.db.Collection("companions").Find(ctx, bson.M{})
 	if err != nil {

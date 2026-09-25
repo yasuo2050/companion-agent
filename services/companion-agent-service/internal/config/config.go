@@ -20,6 +20,7 @@ type Config struct {
 	AgentFlowLogPath                                                     string
 	RedisDB                                                              int
 	ConversationTTL                                                      time.Duration
+	KnowledgeURL, KnowledgeJWTSecret                                     string
 }
 
 // Load 先从当前目录 .env 补充缺失值，再读取并校验配置。
@@ -54,6 +55,8 @@ func Load(requireLLM bool) (Config, error) {
 		return Config{}, fmt.Errorf("ARK_API_KEY 和 ARK_MODEL_ID 必须通过 .env 或环境变量提供")
 	}
 	cfg.Langfuse = loadLangfuse()
+	cfg.KnowledgeURL = env("KNOWLEDGE_API_URL", "http://127.0.0.1:8082")
+	cfg.KnowledgeJWTSecret = os.Getenv("KNOWLEDGE_JWT_SECRET")
 	return cfg, nil
 }
 

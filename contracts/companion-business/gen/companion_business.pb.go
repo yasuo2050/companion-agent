@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.10
 // 	protoc        v6.32.0
-// source: companion_business.proto
+// source: proto/companion_business.proto
 
 package businessv1
 
@@ -36,7 +36,7 @@ type BusinessError struct {
 
 func (x *BusinessError) Reset() {
 	*x = BusinessError{}
-	mi := &file_companion_business_proto_msgTypes[0]
+	mi := &file_proto_companion_business_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -48,7 +48,7 @@ func (x *BusinessError) String() string {
 func (*BusinessError) ProtoMessage() {}
 
 func (x *BusinessError) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[0]
+	mi := &file_proto_companion_business_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -61,7 +61,7 @@ func (x *BusinessError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BusinessError.ProtoReflect.Descriptor instead.
 func (*BusinessError) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{0}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *BusinessError) GetCode() string {
@@ -101,7 +101,7 @@ type GetUserProfileRequest struct {
 
 func (x *GetUserProfileRequest) Reset() {
 	*x = GetUserProfileRequest{}
-	mi := &file_companion_business_proto_msgTypes[1]
+	mi := &file_proto_companion_business_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -113,7 +113,7 @@ func (x *GetUserProfileRequest) String() string {
 func (*GetUserProfileRequest) ProtoMessage() {}
 
 func (x *GetUserProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[1]
+	mi := &file_proto_companion_business_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -126,7 +126,7 @@ func (x *GetUserProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserProfileRequest.ProtoReflect.Descriptor instead.
 func (*GetUserProfileRequest) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{1}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GetUserProfileRequest) GetUserId() string {
@@ -146,7 +146,7 @@ type GetUserProfileResponse struct {
 
 func (x *GetUserProfileResponse) Reset() {
 	*x = GetUserProfileResponse{}
-	mi := &file_companion_business_proto_msgTypes[2]
+	mi := &file_proto_companion_business_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -158,7 +158,7 @@ func (x *GetUserProfileResponse) String() string {
 func (*GetUserProfileResponse) ProtoMessage() {}
 
 func (x *GetUserProfileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[2]
+	mi := &file_proto_companion_business_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -171,7 +171,7 @@ func (x *GetUserProfileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserProfileResponse.ProtoReflect.Descriptor instead.
 func (*GetUserProfileResponse) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{2}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *GetUserProfileResponse) GetProfile() *UserProfile {
@@ -205,7 +205,7 @@ type UserProfile struct {
 
 func (x *UserProfile) Reset() {
 	*x = UserProfile{}
-	mi := &file_companion_business_proto_msgTypes[3]
+	mi := &file_proto_companion_business_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -217,7 +217,7 @@ func (x *UserProfile) String() string {
 func (*UserProfile) ProtoMessage() {}
 
 func (x *UserProfile) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[3]
+	mi := &file_proto_companion_business_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -230,7 +230,7 @@ func (x *UserProfile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserProfile.ProtoReflect.Descriptor instead.
 func (*UserProfile) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{3}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *UserProfile) GetUserId() string {
@@ -306,7 +306,7 @@ type GetRecentOrdersRequest struct {
 
 func (x *GetRecentOrdersRequest) Reset() {
 	*x = GetRecentOrdersRequest{}
-	mi := &file_companion_business_proto_msgTypes[4]
+	mi := &file_proto_companion_business_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -318,7 +318,7 @@ func (x *GetRecentOrdersRequest) String() string {
 func (*GetRecentOrdersRequest) ProtoMessage() {}
 
 func (x *GetRecentOrdersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[4]
+	mi := &file_proto_companion_business_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -331,7 +331,7 @@ func (x *GetRecentOrdersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRecentOrdersRequest.ProtoReflect.Descriptor instead.
 func (*GetRecentOrdersRequest) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{4}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetRecentOrdersRequest) GetUserId() string {
@@ -358,7 +358,7 @@ type GetRecentOrdersResponse struct {
 
 func (x *GetRecentOrdersResponse) Reset() {
 	*x = GetRecentOrdersResponse{}
-	mi := &file_companion_business_proto_msgTypes[5]
+	mi := &file_proto_companion_business_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -370,7 +370,7 @@ func (x *GetRecentOrdersResponse) String() string {
 func (*GetRecentOrdersResponse) ProtoMessage() {}
 
 func (x *GetRecentOrdersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[5]
+	mi := &file_proto_companion_business_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -383,7 +383,7 @@ func (x *GetRecentOrdersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRecentOrdersResponse.ProtoReflect.Descriptor instead.
 func (*GetRecentOrdersResponse) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{5}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetRecentOrdersResponse) GetOrders() []*Order {
@@ -394,6 +394,110 @@ func (x *GetRecentOrdersResponse) GetOrders() []*Order {
 }
 
 func (x *GetRecentOrdersResponse) GetError() *BusinessError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type GetOrderRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	OrderId       string                 `protobuf:"bytes,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOrderRequest) Reset() {
+	*x = GetOrderRequest{}
+	mi := &file_proto_companion_business_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOrderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOrderRequest) ProtoMessage() {}
+
+func (x *GetOrderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_companion_business_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOrderRequest.ProtoReflect.Descriptor instead.
+func (*GetOrderRequest) Descriptor() ([]byte, []int) {
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetOrderRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *GetOrderRequest) GetOrderId() string {
+	if x != nil {
+		return x.OrderId
+	}
+	return ""
+}
+
+type GetOrderResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Order         *Order                 `protobuf:"bytes,1,opt,name=order,proto3" json:"order,omitempty"`
+	Error         *BusinessError         `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOrderResponse) Reset() {
+	*x = GetOrderResponse{}
+	mi := &file_proto_companion_business_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOrderResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOrderResponse) ProtoMessage() {}
+
+func (x *GetOrderResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_companion_business_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOrderResponse.ProtoReflect.Descriptor instead.
+func (*GetOrderResponse) Descriptor() ([]byte, []int) {
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetOrderResponse) GetOrder() *Order {
+	if x != nil {
+		return x.Order
+	}
+	return nil
+}
+
+func (x *GetOrderResponse) GetError() *BusinessError {
 	if x != nil {
 		return x.Error
 	}
@@ -416,7 +520,7 @@ type SearchCompanionsRequest struct {
 
 func (x *SearchCompanionsRequest) Reset() {
 	*x = SearchCompanionsRequest{}
-	mi := &file_companion_business_proto_msgTypes[6]
+	mi := &file_proto_companion_business_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -428,7 +532,7 @@ func (x *SearchCompanionsRequest) String() string {
 func (*SearchCompanionsRequest) ProtoMessage() {}
 
 func (x *SearchCompanionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[6]
+	mi := &file_proto_companion_business_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -441,7 +545,7 @@ func (x *SearchCompanionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchCompanionsRequest.ProtoReflect.Descriptor instead.
 func (*SearchCompanionsRequest) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{6}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SearchCompanionsRequest) GetCompanionId() string {
@@ -510,7 +614,7 @@ type SearchCompanionsResponse struct {
 
 func (x *SearchCompanionsResponse) Reset() {
 	*x = SearchCompanionsResponse{}
-	mi := &file_companion_business_proto_msgTypes[7]
+	mi := &file_proto_companion_business_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -522,7 +626,7 @@ func (x *SearchCompanionsResponse) String() string {
 func (*SearchCompanionsResponse) ProtoMessage() {}
 
 func (x *SearchCompanionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[7]
+	mi := &file_proto_companion_business_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -535,7 +639,7 @@ func (x *SearchCompanionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchCompanionsResponse.ProtoReflect.Descriptor instead.
 func (*SearchCompanionsResponse) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{7}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SearchCompanionsResponse) GetCandidates() []*CompanionCandidate {
@@ -563,7 +667,7 @@ type CompanionCandidate struct {
 
 func (x *CompanionCandidate) Reset() {
 	*x = CompanionCandidate{}
-	mi := &file_companion_business_proto_msgTypes[8]
+	mi := &file_proto_companion_business_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -575,7 +679,7 @@ func (x *CompanionCandidate) String() string {
 func (*CompanionCandidate) ProtoMessage() {}
 
 func (x *CompanionCandidate) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[8]
+	mi := &file_proto_companion_business_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -588,7 +692,7 @@ func (x *CompanionCandidate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompanionCandidate.ProtoReflect.Descriptor instead.
 func (*CompanionCandidate) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{8}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CompanionCandidate) GetCompanion() *Companion {
@@ -630,7 +734,7 @@ type Companion struct {
 
 func (x *Companion) Reset() {
 	*x = Companion{}
-	mi := &file_companion_business_proto_msgTypes[9]
+	mi := &file_proto_companion_business_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -642,7 +746,7 @@ func (x *Companion) String() string {
 func (*Companion) ProtoMessage() {}
 
 func (x *Companion) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[9]
+	mi := &file_proto_companion_business_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -655,7 +759,7 @@ func (x *Companion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Companion.ProtoReflect.Descriptor instead.
 func (*Companion) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{9}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Companion) GetCompanionId() string {
@@ -738,7 +842,7 @@ type AvailableSlot struct {
 
 func (x *AvailableSlot) Reset() {
 	*x = AvailableSlot{}
-	mi := &file_companion_business_proto_msgTypes[10]
+	mi := &file_proto_companion_business_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -750,7 +854,7 @@ func (x *AvailableSlot) String() string {
 func (*AvailableSlot) ProtoMessage() {}
 
 func (x *AvailableSlot) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[10]
+	mi := &file_proto_companion_business_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -763,7 +867,7 @@ func (x *AvailableSlot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AvailableSlot.ProtoReflect.Descriptor instead.
 func (*AvailableSlot) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{10}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *AvailableSlot) GetStartAt() *timestamppb.Timestamp {
@@ -794,7 +898,7 @@ type CreateOrderDraftRequest struct {
 
 func (x *CreateOrderDraftRequest) Reset() {
 	*x = CreateOrderDraftRequest{}
-	mi := &file_companion_business_proto_msgTypes[11]
+	mi := &file_proto_companion_business_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -806,7 +910,7 @@ func (x *CreateOrderDraftRequest) String() string {
 func (*CreateOrderDraftRequest) ProtoMessage() {}
 
 func (x *CreateOrderDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[11]
+	mi := &file_proto_companion_business_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -819,7 +923,7 @@ func (x *CreateOrderDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOrderDraftRequest.ProtoReflect.Descriptor instead.
 func (*CreateOrderDraftRequest) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{11}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CreateOrderDraftRequest) GetUserId() string {
@@ -874,7 +978,7 @@ type CreateOrderDraftResponse struct {
 
 func (x *CreateOrderDraftResponse) Reset() {
 	*x = CreateOrderDraftResponse{}
-	mi := &file_companion_business_proto_msgTypes[12]
+	mi := &file_proto_companion_business_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -886,7 +990,7 @@ func (x *CreateOrderDraftResponse) String() string {
 func (*CreateOrderDraftResponse) ProtoMessage() {}
 
 func (x *CreateOrderDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[12]
+	mi := &file_proto_companion_business_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -899,7 +1003,7 @@ func (x *CreateOrderDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOrderDraftResponse.ProtoReflect.Descriptor instead.
 func (*CreateOrderDraftResponse) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{12}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CreateOrderDraftResponse) GetDraft() *OrderDraft {
@@ -939,7 +1043,7 @@ type OrderDraft struct {
 
 func (x *OrderDraft) Reset() {
 	*x = OrderDraft{}
-	mi := &file_companion_business_proto_msgTypes[13]
+	mi := &file_proto_companion_business_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -951,7 +1055,7 @@ func (x *OrderDraft) String() string {
 func (*OrderDraft) ProtoMessage() {}
 
 func (x *OrderDraft) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[13]
+	mi := &file_proto_companion_business_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -964,7 +1068,7 @@ func (x *OrderDraft) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OrderDraft.ProtoReflect.Descriptor instead.
 func (*OrderDraft) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{13}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *OrderDraft) GetDraftId() string {
@@ -1083,7 +1187,7 @@ type ConfirmOrderRequest struct {
 
 func (x *ConfirmOrderRequest) Reset() {
 	*x = ConfirmOrderRequest{}
-	mi := &file_companion_business_proto_msgTypes[14]
+	mi := &file_proto_companion_business_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1095,7 +1199,7 @@ func (x *ConfirmOrderRequest) String() string {
 func (*ConfirmOrderRequest) ProtoMessage() {}
 
 func (x *ConfirmOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[14]
+	mi := &file_proto_companion_business_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1108,7 +1212,7 @@ func (x *ConfirmOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmOrderRequest.ProtoReflect.Descriptor instead.
 func (*ConfirmOrderRequest) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{14}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ConfirmOrderRequest) GetUserId() string {
@@ -1143,7 +1247,7 @@ type ConfirmOrderResponse struct {
 
 func (x *ConfirmOrderResponse) Reset() {
 	*x = ConfirmOrderResponse{}
-	mi := &file_companion_business_proto_msgTypes[15]
+	mi := &file_proto_companion_business_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1155,7 +1259,7 @@ func (x *ConfirmOrderResponse) String() string {
 func (*ConfirmOrderResponse) ProtoMessage() {}
 
 func (x *ConfirmOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[15]
+	mi := &file_proto_companion_business_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1168,7 +1272,7 @@ func (x *ConfirmOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmOrderResponse.ProtoReflect.Descriptor instead.
 func (*ConfirmOrderResponse) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{15}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ConfirmOrderResponse) GetOrder() *Order {
@@ -1214,7 +1318,7 @@ type Order struct {
 
 func (x *Order) Reset() {
 	*x = Order{}
-	mi := &file_companion_business_proto_msgTypes[16]
+	mi := &file_proto_companion_business_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1226,7 +1330,7 @@ func (x *Order) String() string {
 func (*Order) ProtoMessage() {}
 
 func (x *Order) ProtoReflect() protoreflect.Message {
-	mi := &file_companion_business_proto_msgTypes[16]
+	mi := &file_proto_companion_business_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1239,7 +1343,7 @@ func (x *Order) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Order.ProtoReflect.Descriptor instead.
 func (*Order) Descriptor() ([]byte, []int) {
-	return file_companion_business_proto_rawDescGZIP(), []int{16}
+	return file_proto_companion_business_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *Order) GetOrderId() string {
@@ -1340,11 +1444,11 @@ func (x *Order) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-var File_companion_business_proto protoreflect.FileDescriptor
+var File_proto_companion_business_proto protoreflect.FileDescriptor
 
-const file_companion_business_proto_rawDesc = "" +
+const file_proto_companion_business_proto_rawDesc = "" +
 	"\n" +
-	"\x18companion_business.proto\x12\x15companion.business.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8e\x01\n" +
+	"\x1eproto/companion_business.proto\x12\x15companion.business.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8e\x01\n" +
 	"\rBusinessError\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1c\n" +
@@ -1371,6 +1475,12 @@ const file_companion_business_proto_rawDesc = "" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\"\x8b\x01\n" +
 	"\x17GetRecentOrdersResponse\x124\n" +
 	"\x06orders\x18\x01 \x03(\v2\x1c.companion.business.v1.OrderR\x06orders\x12:\n" +
+	"\x05error\x18\x02 \x01(\v2$.companion.business.v1.BusinessErrorR\x05error\"E\n" +
+	"\x0fGetOrderRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x19\n" +
+	"\border_id\x18\x02 \x01(\tR\aorderId\"\x82\x01\n" +
+	"\x10GetOrderResponse\x122\n" +
+	"\x05order\x18\x01 \x01(\v2\x1c.companion.business.v1.OrderR\x05order\x12:\n" +
 	"\x05error\x18\x02 \x01(\v2$.companion.business.v1.BusinessErrorR\x05error\"\xbd\x02\n" +
 	"\x17SearchCompanionsRequest\x12!\n" +
 	"\fcompanion_id\x18\x01 \x01(\tR\vcompanionId\x12\x17\n" +
@@ -1465,113 +1575,120 @@ const file_companion_business_proto_rawDesc = "" +
 	"\x06status\x18\f \x01(\tR\x06status\x12\x16\n" +
 	"\x06source\x18\r \x01(\tR\x06source\x129\n" +
 	"\n" +
-	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\xce\x04\n" +
+	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\xab\x05\n" +
 	"\x18CompanionBusinessService\x12m\n" +
 	"\x0eGetUserProfile\x12,.companion.business.v1.GetUserProfileRequest\x1a-.companion.business.v1.GetUserProfileResponse\x12p\n" +
-	"\x0fGetRecentOrders\x12-.companion.business.v1.GetRecentOrdersRequest\x1a..companion.business.v1.GetRecentOrdersResponse\x12s\n" +
+	"\x0fGetRecentOrders\x12-.companion.business.v1.GetRecentOrdersRequest\x1a..companion.business.v1.GetRecentOrdersResponse\x12[\n" +
+	"\bGetOrder\x12&.companion.business.v1.GetOrderRequest\x1a'.companion.business.v1.GetOrderResponse\x12s\n" +
 	"\x10SearchCompanions\x12..companion.business.v1.SearchCompanionsRequest\x1a/.companion.business.v1.SearchCompanionsResponse\x12s\n" +
 	"\x10CreateOrderDraft\x12..companion.business.v1.CreateOrderDraftRequest\x1a/.companion.business.v1.CreateOrderDraftResponse\x12g\n" +
 	"\fConfirmOrder\x12*.companion.business.v1.ConfirmOrderRequest\x1a+.companion.business.v1.ConfirmOrderResponseB=Z;companion-agent/contracts/companion-business/gen;businessv1b\x06proto3"
 
 var (
-	file_companion_business_proto_rawDescOnce sync.Once
-	file_companion_business_proto_rawDescData []byte
+	file_proto_companion_business_proto_rawDescOnce sync.Once
+	file_proto_companion_business_proto_rawDescData []byte
 )
 
-func file_companion_business_proto_rawDescGZIP() []byte {
-	file_companion_business_proto_rawDescOnce.Do(func() {
-		file_companion_business_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_companion_business_proto_rawDesc), len(file_companion_business_proto_rawDesc)))
+func file_proto_companion_business_proto_rawDescGZIP() []byte {
+	file_proto_companion_business_proto_rawDescOnce.Do(func() {
+		file_proto_companion_business_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_companion_business_proto_rawDesc), len(file_proto_companion_business_proto_rawDesc)))
 	})
-	return file_companion_business_proto_rawDescData
+	return file_proto_companion_business_proto_rawDescData
 }
 
-var file_companion_business_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
-var file_companion_business_proto_goTypes = []any{
+var file_proto_companion_business_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_proto_companion_business_proto_goTypes = []any{
 	(*BusinessError)(nil),            // 0: companion.business.v1.BusinessError
 	(*GetUserProfileRequest)(nil),    // 1: companion.business.v1.GetUserProfileRequest
 	(*GetUserProfileResponse)(nil),   // 2: companion.business.v1.GetUserProfileResponse
 	(*UserProfile)(nil),              // 3: companion.business.v1.UserProfile
 	(*GetRecentOrdersRequest)(nil),   // 4: companion.business.v1.GetRecentOrdersRequest
 	(*GetRecentOrdersResponse)(nil),  // 5: companion.business.v1.GetRecentOrdersResponse
-	(*SearchCompanionsRequest)(nil),  // 6: companion.business.v1.SearchCompanionsRequest
-	(*SearchCompanionsResponse)(nil), // 7: companion.business.v1.SearchCompanionsResponse
-	(*CompanionCandidate)(nil),       // 8: companion.business.v1.CompanionCandidate
-	(*Companion)(nil),                // 9: companion.business.v1.Companion
-	(*AvailableSlot)(nil),            // 10: companion.business.v1.AvailableSlot
-	(*CreateOrderDraftRequest)(nil),  // 11: companion.business.v1.CreateOrderDraftRequest
-	(*CreateOrderDraftResponse)(nil), // 12: companion.business.v1.CreateOrderDraftResponse
-	(*OrderDraft)(nil),               // 13: companion.business.v1.OrderDraft
-	(*ConfirmOrderRequest)(nil),      // 14: companion.business.v1.ConfirmOrderRequest
-	(*ConfirmOrderResponse)(nil),     // 15: companion.business.v1.ConfirmOrderResponse
-	(*Order)(nil),                    // 16: companion.business.v1.Order
-	(*structpb.Struct)(nil),          // 17: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil),    // 18: google.protobuf.Timestamp
+	(*GetOrderRequest)(nil),          // 6: companion.business.v1.GetOrderRequest
+	(*GetOrderResponse)(nil),         // 7: companion.business.v1.GetOrderResponse
+	(*SearchCompanionsRequest)(nil),  // 8: companion.business.v1.SearchCompanionsRequest
+	(*SearchCompanionsResponse)(nil), // 9: companion.business.v1.SearchCompanionsResponse
+	(*CompanionCandidate)(nil),       // 10: companion.business.v1.CompanionCandidate
+	(*Companion)(nil),                // 11: companion.business.v1.Companion
+	(*AvailableSlot)(nil),            // 12: companion.business.v1.AvailableSlot
+	(*CreateOrderDraftRequest)(nil),  // 13: companion.business.v1.CreateOrderDraftRequest
+	(*CreateOrderDraftResponse)(nil), // 14: companion.business.v1.CreateOrderDraftResponse
+	(*OrderDraft)(nil),               // 15: companion.business.v1.OrderDraft
+	(*ConfirmOrderRequest)(nil),      // 16: companion.business.v1.ConfirmOrderRequest
+	(*ConfirmOrderResponse)(nil),     // 17: companion.business.v1.ConfirmOrderResponse
+	(*Order)(nil),                    // 18: companion.business.v1.Order
+	(*structpb.Struct)(nil),          // 19: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),    // 20: google.protobuf.Timestamp
 }
-var file_companion_business_proto_depIdxs = []int32{
-	17, // 0: companion.business.v1.BusinessError.details:type_name -> google.protobuf.Struct
+var file_proto_companion_business_proto_depIdxs = []int32{
+	19, // 0: companion.business.v1.BusinessError.details:type_name -> google.protobuf.Struct
 	3,  // 1: companion.business.v1.GetUserProfileResponse.profile:type_name -> companion.business.v1.UserProfile
 	0,  // 2: companion.business.v1.GetUserProfileResponse.error:type_name -> companion.business.v1.BusinessError
-	18, // 3: companion.business.v1.UserProfile.updated_at:type_name -> google.protobuf.Timestamp
-	16, // 4: companion.business.v1.GetRecentOrdersResponse.orders:type_name -> companion.business.v1.Order
+	20, // 3: companion.business.v1.UserProfile.updated_at:type_name -> google.protobuf.Timestamp
+	18, // 4: companion.business.v1.GetRecentOrdersResponse.orders:type_name -> companion.business.v1.Order
 	0,  // 5: companion.business.v1.GetRecentOrdersResponse.error:type_name -> companion.business.v1.BusinessError
-	18, // 6: companion.business.v1.SearchCompanionsRequest.start_time:type_name -> google.protobuf.Timestamp
-	8,  // 7: companion.business.v1.SearchCompanionsResponse.candidates:type_name -> companion.business.v1.CompanionCandidate
-	0,  // 8: companion.business.v1.SearchCompanionsResponse.error:type_name -> companion.business.v1.BusinessError
-	9,  // 9: companion.business.v1.CompanionCandidate.companion:type_name -> companion.business.v1.Companion
-	10, // 10: companion.business.v1.Companion.available_slots:type_name -> companion.business.v1.AvailableSlot
-	18, // 11: companion.business.v1.AvailableSlot.start_at:type_name -> google.protobuf.Timestamp
-	18, // 12: companion.business.v1.AvailableSlot.end_at:type_name -> google.protobuf.Timestamp
-	18, // 13: companion.business.v1.CreateOrderDraftRequest.start_time:type_name -> google.protobuf.Timestamp
-	13, // 14: companion.business.v1.CreateOrderDraftResponse.draft:type_name -> companion.business.v1.OrderDraft
-	0,  // 15: companion.business.v1.CreateOrderDraftResponse.error:type_name -> companion.business.v1.BusinessError
-	18, // 16: companion.business.v1.OrderDraft.start_time:type_name -> google.protobuf.Timestamp
-	18, // 17: companion.business.v1.OrderDraft.end_time:type_name -> google.protobuf.Timestamp
-	18, // 18: companion.business.v1.OrderDraft.expires_at:type_name -> google.protobuf.Timestamp
-	18, // 19: companion.business.v1.OrderDraft.created_at:type_name -> google.protobuf.Timestamp
-	18, // 20: companion.business.v1.OrderDraft.updated_at:type_name -> google.protobuf.Timestamp
-	16, // 21: companion.business.v1.ConfirmOrderResponse.order:type_name -> companion.business.v1.Order
-	13, // 22: companion.business.v1.ConfirmOrderResponse.replacement_draft:type_name -> companion.business.v1.OrderDraft
-	0,  // 23: companion.business.v1.ConfirmOrderResponse.error:type_name -> companion.business.v1.BusinessError
-	18, // 24: companion.business.v1.Order.start_time:type_name -> google.protobuf.Timestamp
-	18, // 25: companion.business.v1.Order.end_time:type_name -> google.protobuf.Timestamp
-	18, // 26: companion.business.v1.Order.created_at:type_name -> google.protobuf.Timestamp
-	1,  // 27: companion.business.v1.CompanionBusinessService.GetUserProfile:input_type -> companion.business.v1.GetUserProfileRequest
-	4,  // 28: companion.business.v1.CompanionBusinessService.GetRecentOrders:input_type -> companion.business.v1.GetRecentOrdersRequest
-	6,  // 29: companion.business.v1.CompanionBusinessService.SearchCompanions:input_type -> companion.business.v1.SearchCompanionsRequest
-	11, // 30: companion.business.v1.CompanionBusinessService.CreateOrderDraft:input_type -> companion.business.v1.CreateOrderDraftRequest
-	14, // 31: companion.business.v1.CompanionBusinessService.ConfirmOrder:input_type -> companion.business.v1.ConfirmOrderRequest
-	2,  // 32: companion.business.v1.CompanionBusinessService.GetUserProfile:output_type -> companion.business.v1.GetUserProfileResponse
-	5,  // 33: companion.business.v1.CompanionBusinessService.GetRecentOrders:output_type -> companion.business.v1.GetRecentOrdersResponse
-	7,  // 34: companion.business.v1.CompanionBusinessService.SearchCompanions:output_type -> companion.business.v1.SearchCompanionsResponse
-	12, // 35: companion.business.v1.CompanionBusinessService.CreateOrderDraft:output_type -> companion.business.v1.CreateOrderDraftResponse
-	15, // 36: companion.business.v1.CompanionBusinessService.ConfirmOrder:output_type -> companion.business.v1.ConfirmOrderResponse
-	32, // [32:37] is the sub-list for method output_type
-	27, // [27:32] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	18, // 6: companion.business.v1.GetOrderResponse.order:type_name -> companion.business.v1.Order
+	0,  // 7: companion.business.v1.GetOrderResponse.error:type_name -> companion.business.v1.BusinessError
+	20, // 8: companion.business.v1.SearchCompanionsRequest.start_time:type_name -> google.protobuf.Timestamp
+	10, // 9: companion.business.v1.SearchCompanionsResponse.candidates:type_name -> companion.business.v1.CompanionCandidate
+	0,  // 10: companion.business.v1.SearchCompanionsResponse.error:type_name -> companion.business.v1.BusinessError
+	11, // 11: companion.business.v1.CompanionCandidate.companion:type_name -> companion.business.v1.Companion
+	12, // 12: companion.business.v1.Companion.available_slots:type_name -> companion.business.v1.AvailableSlot
+	20, // 13: companion.business.v1.AvailableSlot.start_at:type_name -> google.protobuf.Timestamp
+	20, // 14: companion.business.v1.AvailableSlot.end_at:type_name -> google.protobuf.Timestamp
+	20, // 15: companion.business.v1.CreateOrderDraftRequest.start_time:type_name -> google.protobuf.Timestamp
+	15, // 16: companion.business.v1.CreateOrderDraftResponse.draft:type_name -> companion.business.v1.OrderDraft
+	0,  // 17: companion.business.v1.CreateOrderDraftResponse.error:type_name -> companion.business.v1.BusinessError
+	20, // 18: companion.business.v1.OrderDraft.start_time:type_name -> google.protobuf.Timestamp
+	20, // 19: companion.business.v1.OrderDraft.end_time:type_name -> google.protobuf.Timestamp
+	20, // 20: companion.business.v1.OrderDraft.expires_at:type_name -> google.protobuf.Timestamp
+	20, // 21: companion.business.v1.OrderDraft.created_at:type_name -> google.protobuf.Timestamp
+	20, // 22: companion.business.v1.OrderDraft.updated_at:type_name -> google.protobuf.Timestamp
+	18, // 23: companion.business.v1.ConfirmOrderResponse.order:type_name -> companion.business.v1.Order
+	15, // 24: companion.business.v1.ConfirmOrderResponse.replacement_draft:type_name -> companion.business.v1.OrderDraft
+	0,  // 25: companion.business.v1.ConfirmOrderResponse.error:type_name -> companion.business.v1.BusinessError
+	20, // 26: companion.business.v1.Order.start_time:type_name -> google.protobuf.Timestamp
+	20, // 27: companion.business.v1.Order.end_time:type_name -> google.protobuf.Timestamp
+	20, // 28: companion.business.v1.Order.created_at:type_name -> google.protobuf.Timestamp
+	1,  // 29: companion.business.v1.CompanionBusinessService.GetUserProfile:input_type -> companion.business.v1.GetUserProfileRequest
+	4,  // 30: companion.business.v1.CompanionBusinessService.GetRecentOrders:input_type -> companion.business.v1.GetRecentOrdersRequest
+	6,  // 31: companion.business.v1.CompanionBusinessService.GetOrder:input_type -> companion.business.v1.GetOrderRequest
+	8,  // 32: companion.business.v1.CompanionBusinessService.SearchCompanions:input_type -> companion.business.v1.SearchCompanionsRequest
+	13, // 33: companion.business.v1.CompanionBusinessService.CreateOrderDraft:input_type -> companion.business.v1.CreateOrderDraftRequest
+	16, // 34: companion.business.v1.CompanionBusinessService.ConfirmOrder:input_type -> companion.business.v1.ConfirmOrderRequest
+	2,  // 35: companion.business.v1.CompanionBusinessService.GetUserProfile:output_type -> companion.business.v1.GetUserProfileResponse
+	5,  // 36: companion.business.v1.CompanionBusinessService.GetRecentOrders:output_type -> companion.business.v1.GetRecentOrdersResponse
+	7,  // 37: companion.business.v1.CompanionBusinessService.GetOrder:output_type -> companion.business.v1.GetOrderResponse
+	9,  // 38: companion.business.v1.CompanionBusinessService.SearchCompanions:output_type -> companion.business.v1.SearchCompanionsResponse
+	14, // 39: companion.business.v1.CompanionBusinessService.CreateOrderDraft:output_type -> companion.business.v1.CreateOrderDraftResponse
+	17, // 40: companion.business.v1.CompanionBusinessService.ConfirmOrder:output_type -> companion.business.v1.ConfirmOrderResponse
+	35, // [35:41] is the sub-list for method output_type
+	29, // [29:35] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
-func init() { file_companion_business_proto_init() }
-func file_companion_business_proto_init() {
-	if File_companion_business_proto != nil {
+func init() { file_proto_companion_business_proto_init() }
+func file_proto_companion_business_proto_init() {
+	if File_proto_companion_business_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_companion_business_proto_rawDesc), len(file_companion_business_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_companion_business_proto_rawDesc), len(file_proto_companion_business_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_companion_business_proto_goTypes,
-		DependencyIndexes: file_companion_business_proto_depIdxs,
-		MessageInfos:      file_companion_business_proto_msgTypes,
+		GoTypes:           file_proto_companion_business_proto_goTypes,
+		DependencyIndexes: file_proto_companion_business_proto_depIdxs,
+		MessageInfos:      file_proto_companion_business_proto_msgTypes,
 	}.Build()
-	File_companion_business_proto = out.File
-	file_companion_business_proto_goTypes = nil
-	file_companion_business_proto_depIdxs = nil
+	File_proto_companion_business_proto = out.File
+	file_proto_companion_business_proto_goTypes = nil
+	file_proto_companion_business_proto_depIdxs = nil
 }

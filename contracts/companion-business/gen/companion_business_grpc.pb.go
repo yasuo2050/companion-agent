@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type CompanionBusinessServiceClient interface {
 	GetUserProfile(ctx context.Context, in *GetUserProfileRequest, opts ...grpc.CallOption) (*GetUserProfileResponse, error)
 	GetRecentOrders(ctx context.Context, in *GetRecentOrdersRequest, opts ...grpc.CallOption) (*GetRecentOrdersResponse, error)
+	GetOrder(ctx context.Context, in *GetOrderRequest, opts ...grpc.CallOption) (*GetOrderResponse, error)
 	SearchCompanions(ctx context.Context, in *SearchCompanionsRequest, opts ...grpc.CallOption) (*SearchCompanionsResponse, error)
 	CreateOrderDraft(ctx context.Context, in *CreateOrderDraftRequest, opts ...grpc.CallOption) (*CreateOrderDraftResponse, error)
 	ConfirmOrder(ctx context.Context, in *ConfirmOrderRequest, opts ...grpc.CallOption) (*ConfirmOrderResponse, error)
@@ -49,6 +50,15 @@ func (c *companionBusinessServiceClient) GetUserProfile(ctx context.Context, in 
 func (c *companionBusinessServiceClient) GetRecentOrders(ctx context.Context, in *GetRecentOrdersRequest, opts ...grpc.CallOption) (*GetRecentOrdersResponse, error) {
 	out := new(GetRecentOrdersResponse)
 	err := c.cc.Invoke(ctx, "/companion.business.v1.CompanionBusinessService/GetRecentOrders", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *companionBusinessServiceClient) GetOrder(ctx context.Context, in *GetOrderRequest, opts ...grpc.CallOption) (*GetOrderResponse, error) {
+	out := new(GetOrderResponse)
+	err := c.cc.Invoke(ctx, "/companion.business.v1.CompanionBusinessService/GetOrder", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +98,7 @@ func (c *companionBusinessServiceClient) ConfirmOrder(ctx context.Context, in *C
 type CompanionBusinessServiceServer interface {
 	GetUserProfile(context.Context, *GetUserProfileRequest) (*GetUserProfileResponse, error)
 	GetRecentOrders(context.Context, *GetRecentOrdersRequest) (*GetRecentOrdersResponse, error)
+	GetOrder(context.Context, *GetOrderRequest) (*GetOrderResponse, error)
 	SearchCompanions(context.Context, *SearchCompanionsRequest) (*SearchCompanionsResponse, error)
 	CreateOrderDraft(context.Context, *CreateOrderDraftRequest) (*CreateOrderDraftResponse, error)
 	ConfirmOrder(context.Context, *ConfirmOrderRequest) (*ConfirmOrderResponse, error)
@@ -103,6 +114,9 @@ func (UnimplementedCompanionBusinessServiceServer) GetUserProfile(context.Contex
 }
 func (UnimplementedCompanionBusinessServiceServer) GetRecentOrders(context.Context, *GetRecentOrdersRequest) (*GetRecentOrdersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRecentOrders not implemented")
+}
+func (UnimplementedCompanionBusinessServiceServer) GetOrder(context.Context, *GetOrderRequest) (*GetOrderResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetOrder not implemented")
 }
 func (UnimplementedCompanionBusinessServiceServer) SearchCompanions(context.Context, *SearchCompanionsRequest) (*SearchCompanionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SearchCompanions not implemented")
@@ -159,6 +173,24 @@ func _CompanionBusinessService_GetRecentOrders_Handler(srv interface{}, ctx cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CompanionBusinessServiceServer).GetRecentOrders(ctx, req.(*GetRecentOrdersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CompanionBusinessService_GetOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CompanionBusinessServiceServer).GetOrder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/companion.business.v1.CompanionBusinessService/GetOrder",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CompanionBusinessServiceServer).GetOrder(ctx, req.(*GetOrderRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -231,6 +263,10 @@ var CompanionBusinessService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetRecentOrders",
 			Handler:    _CompanionBusinessService_GetRecentOrders_Handler,
+		},
+		{
+			MethodName: "GetOrder",
+			Handler:    _CompanionBusinessService_GetOrder_Handler,
 		},
 		{
 			MethodName: "SearchCompanions",

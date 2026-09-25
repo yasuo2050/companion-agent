@@ -37,6 +37,23 @@ func (m *memoryStore) RecentOrders(_ context.Context, user string, limit int32) 
 	}
 	return out, nil
 }
+func (m *memoryStore) GetOrder(_ context.Context, user, id string) (Order, error) {
+	v, ok := m.orders[id]
+	if !ok || v.UserID != user {
+		return Order{}, mongo.ErrNoDocuments
+	}
+	return v, nil
+}
+func TestGetOrderChecksOwnership(t *testing.T) {
+	s, m, _ := fixture(t)
+	m.orders["order-one"] = Order{OrderID: "order-one", UserID: "10001", Status: OrderConfirmed}
+	if _, err := s.GetOrder(context.Background(), "10001", "order-one"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.GetOrder(context.Background(), "20002", "order-one"); err == nil {
+		t.Fatal("其他用户不应读取订单")
+	}
+}
 func (m *memoryStore) ListCompanions(context.Context) ([]Companion, error) {
 	out := []Companion{}
 	for _, v := range m.companions {

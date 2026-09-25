@@ -20,6 +20,9 @@ import (
 type recentInput struct {
 	Limit int32 `json:"limit" jsonschema_description:"返回最近订单数量，默认 1，最大 10"`
 }
+type orderInput struct {
+	OrderID string `json:"order_id" jsonschema:"required" jsonschema_description:"用户提供的订单 ID"`
+}
 type searchInput struct {
 	CompanionID      string   `json:"companion_id,omitempty" jsonschema_description:"明确指定的陪玩 ID"`
 	ReuseRecentOrder bool     `json:"reuse_recent_order,omitempty" jsonschema_description:"仅复购意图使用；再下一单、还是上次那个等场景设为 true，由服务端补齐最近已确认订单的陪玩"`
@@ -82,6 +85,17 @@ func BuildWithDefaults(client *businessclient.Client, userID, conversationID str
 	if err != nil {
 		return nil, err
 	}
+	getOrder, err := utils.InferTool("get_order", "只读查询当前用户指定 ID 的真实订单；服务端校验订单归属", func(ctx context.Context, in orderInput) (map[string]any, error) {
+		started := time.Now()
+		observe("get_order", "started", started, in)
+		response, callErr := client.GetOrder(ctx, &businessv1.GetOrderRequest{UserId: userID, OrderId: in.OrderID})
+		output, runErr := encode(response, callErr)
+		observe("get_order", "completed", started, output)
+		return output, runErr
+	})
+	if err != nil {
+		return nil, err
+	}
 	search, err := utils.InferTool("search_companions", "查询满足当前硬条件的真实陪玩候选；preferred_tags 只计算匹配，不过滤或重排", func(ctx context.Context, in searchInput) (map[string]any, error) {
 		in = applySearchDefaults(in, defaults)
 		started := time.Now()
@@ -137,7 +151,7 @@ func BuildWithDefaults(client *businessclient.Client, userID, conversationID str
 	if err != nil {
 		return nil, err
 	}
-	return []tool.BaseTool{recent, search, draft, confirm}, nil
+	return []tool.BaseTool{recent, getOrder, search, draft, confirm}, nil
 }
 
 func applySearchDefaults(in searchInput, defaults OrderDefaults) searchInput {

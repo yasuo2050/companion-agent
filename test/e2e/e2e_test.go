@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +18,57 @@ import (
 type response struct {
 	Events, Tools []string
 	Text          string
+}
+
+func demoPassword(t *testing.T) string {
+	t.Helper()
+	if value := os.Getenv("E2E_DEMO_PASSWORD"); value != "" {
+		return value
+	}
+	path := os.Getenv("E2E_KNOWLEDGE_ENV")
+	if path == "" {
+		path = filepath.Join("..", "..", "..", "companion-ai-knowledge-platform", ".env")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("无法读取演示登录配置：%v；可设置 E2E_KNOWLEDGE_ENV", err)
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, "KNOWLEDGE_DEMO_PASSWORD=") {
+			return strings.TrimPrefix(line, "KNOWLEDGE_DEMO_PASSWORD=")
+		}
+	}
+	t.Fatal("演示登录配置缺少 KNOWLEDGE_DEMO_PASSWORD")
+	return ""
+}
+
+func token(t *testing.T, user string) string {
+	t.Helper()
+	base := os.Getenv("E2E_KNOWLEDGE_URL")
+	if base == "" {
+		base = "http://127.0.0.1:8082"
+	}
+	input, _ := json.Marshal(map[string]string{"tenant_id": "demo-a", "user_id": user, "password": demoPassword(t)})
+	request, err := http.NewRequest(http.MethodPost, base+"/api/v1/login", bytes.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	result, err := (&http.Client{Timeout: 10 * time.Second}).Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer result.Body.Close()
+	if result.StatusCode != http.StatusOK {
+		t.Fatalf("演示登录失败：HTTP %d", result.StatusCode)
+	}
+	var value struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(result.Body).Decode(&value); err != nil || value.Token == "" {
+		t.Fatalf("演示令牌无效：%v", err)
+	}
+	return value.Token
 }
 
 func chat(t *testing.T, user, conversation, message string) response {
@@ -32,6 +84,7 @@ func chat(t *testing.T, user, conversation, message string) response {
 		t.Fatal(err)
 	}
 	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+token(t, user))
 	raw, err := client.Do(request)
 	if err != nil {
 		t.Fatal(err)
@@ -86,7 +139,7 @@ func TestPersonalizedRecommendations(t *testing.T) {
 	cases := []struct{ user, name string }{{"10001", "小雨"}, {"10002", "阿杰"}, {"10003", "可可"}}
 	for _, item := range cases {
 		t.Run(item.user, func(t *testing.T) {
-			result := chat(t, item.user, "e2e-personal-"+item.user, "明天晚上8点帮我找个永劫陪玩，玩两小时。只推荐一位，先不要创建订单预览。")
+			result := chat(t, item.user, fmt.Sprintf("e2e-personal-%s-%d", item.user, time.Now().UnixNano()), "明天晚上8点帮我找个永劫陪玩，玩两小时。只推荐一位，先不要创建订单预览。")
 			if !contains(result.Tools, "search_companions") {
 				t.Fatalf("未调用 search_companions: %#v", result.Tools)
 			}
@@ -97,7 +150,7 @@ func TestPersonalizedRecommendations(t *testing.T) {
 	}
 }
 func TestHistoryDraftAndConfirm(t *testing.T) {
-	conversation := "e2e-history-flow"
+	conversation := fmt.Sprintf("e2e-history-flow-%d", time.Now().UnixNano())
 	preview := chat(t, "10001", conversation, "上次那个明天晚上8点再来两小时，直接创建订单预览")
 	if !contains(preview.Tools, "get_recent_orders") || !contains(preview.Tools, "create_order_draft") {
 		t.Fatalf("历史复购工具链不完整: %#v; 回复: %s", preview.Tools, preview.Text)
@@ -111,7 +164,7 @@ func TestHistoryDraftAndConfirm(t *testing.T) {
 	}
 }
 func TestMissingStartTimeOnlyAsksNecessarySlot(t *testing.T) {
-	result := chat(t, "10001", "e2e-missing-slot", "按我平时习惯找个永劫陪玩，时长也按平时来")
+	result := chat(t, "10001", fmt.Sprintf("e2e-missing-slot-%d", time.Now().UnixNano()), "按我平时习惯找个永劫陪玩，时长也按平时来")
 	if !strings.Contains(result.Text, "时间") && !strings.Contains(result.Text, "几点") {
 		t.Fatalf("未补问开始时间: %s", result.Text)
 	}
@@ -120,7 +173,7 @@ func TestMissingStartTimeOnlyAsksNecessarySlot(t *testing.T) {
 	}
 }
 func TestNoCandidateDoesNotInvent(t *testing.T) {
-	result := chat(t, "10001", "e2e-no-candidate", "明天晚上8点只要女性永劫陪玩，必须每小时1元以内，玩两小时")
+	result := chat(t, "10001", fmt.Sprintf("e2e-no-candidate-%d", time.Now().UnixNano()), "明天晚上8点只要女性永劫陪玩，必须每小时1元以内，玩两小时")
 	if !contains(result.Tools, "search_companions") {
 		t.Fatalf("未真实查询候选")
 	}

@@ -5,15 +5,15 @@ import (
 	"testing"
 )
 
-func TestFourToolSchemas(t *testing.T) {
+func TestBusinessToolSchemas(t *testing.T) {
 	tools, err := Build(nil, "10001", "c1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(tools) != 4 {
-		t.Fatalf("期望 4 个 Tool，实际 %d", len(tools))
+	if len(tools) != 5 {
+		t.Fatalf("期望 5 个 Tool，实际 %d", len(tools))
 	}
-	expected := []string{"get_recent_orders", "search_companions", "create_order_draft", "confirm_order"}
+	expected := []string{"get_recent_orders", "get_order", "search_companions", "create_order_draft", "confirm_order"}
 	for i, item := range tools {
 		info, err := item.Info(context.Background())
 		if err != nil {

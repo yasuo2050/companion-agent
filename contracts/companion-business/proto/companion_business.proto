@@ -11,6 +11,7 @@ import "google/protobuf/timestamp.proto";
 service CompanionBusinessService {
   rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
   rpc GetRecentOrders(GetRecentOrdersRequest) returns (GetRecentOrdersResponse);
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
   rpc SearchCompanions(SearchCompanionsRequest) returns (SearchCompanionsResponse);
   rpc CreateOrderDraft(CreateOrderDraftRequest) returns (CreateOrderDraftResponse);
   rpc ConfirmOrder(ConfirmOrderRequest) returns (ConfirmOrderResponse);
@@ -41,6 +42,8 @@ message UserProfile {
 
 message GetRecentOrdersRequest { string user_id = 1; int32 limit = 2; }
 message GetRecentOrdersResponse { repeated Order orders = 1; BusinessError error = 2; }
+message GetOrderRequest { string user_id = 1; string order_id = 2; }
+message GetOrderResponse { Order order = 1; BusinessError error = 2; }
 
 message SearchCompanionsRequest {
   string companion_id = 1;
