@@ -142,14 +142,14 @@ cd services/mock-business-service && go test ./... && go test -race ./...
 cd services/companion-agent-service && go test ./... && go test -race ./...
 ```
 
-两个服务启动且执行干净 Seed 后，运行真实黑盒 E2E：
+先运行知识平台，再用隔离容器运行真实黑盒 E2E：
 
 ```bash
 cd test/e2e
-E2E_BASE_URL=http://127.0.0.1:8080 go test -tags=integration -count=1 -v
+./run-isolated.sh
 ```
 
-E2E 会从并列知识平台的本机 `.env` 获取演示登录密码并换取令牌，真实访问 Ark，并在 MongoDB 创建可重置的 Draft/Order。若配置文件路径不同，设置 `E2E_KNOWLEDGE_ENV`；也可设置 `E2E_DEMO_PASSWORD`。默认单元测试不访问外部模型。
+E2E 会从并列知识平台的本机 `.env` 获取演示登录密码并换取令牌，真实访问 Ark，只在隔离的 MongoDB 和 Redis 中创建可重置的 Draft/Order。若配置文件路径不同，设置 `E2E_KNOWLEDGE_ENV`；也可设置 `E2E_DEMO_PASSWORD`。默认单元测试不访问外部模型。
 
 ## 安全说明
 

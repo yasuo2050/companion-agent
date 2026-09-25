@@ -1,0 +1,51 @@
+name: companion-rag-e2e
+services:
+  mongo:
+    image: mongo:7.0.16
+    volumes: ["e2e_mongo:/data/db"]
+  redis:
+    image: redis:7.4.2-alpine
+    volumes: ["e2e_redis:/data"]
+  business:
+    build:
+      context: ../..
+      dockerfile: services/mock-business-service/Dockerfile
+    environment:
+      BUSINESS_GRPC_ADDR: :9090
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DATABASE: companion_agent_mvp
+      REDIS_ADDR: redis:6379
+      REDIS_KEY_PREFIX: "companion-agent:e2e:"
+    depends_on: [mongo, redis]
+  seed:
+    build:
+      context: ../..
+      dockerfile: services/mock-business-service/Dockerfile
+    entrypoint: ["/seed"]
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DATABASE: companion_agent_mvp
+      REDIS_ADDR: redis:6379
+      REDIS_KEY_PREFIX: "companion-agent:e2e:"
+    depends_on: [mongo, redis]
+    profiles: ["seed"]
+  agent:
+    build:
+      context: ../..
+      dockerfile: services/companion-agent-service/Dockerfile
+    environment:
+      AGENT_HTTP_ADDR: :8080
+      BUSINESS_GRPC_ADDR: business:9090
+      REDIS_ADDR: redis:6379
+      REDIS_KEY_PREFIX: "companion-agent:e2e:"
+      KNOWLEDGE_API_URL: http://host.docker.internal:8082
+      KNOWLEDGE_JWT_SECRET: ${KNOWLEDGE_JWT_SECRET:?需要本机知识平台签名密钥}
+      ARK_API_KEY: ${ARK_API_KEY:?需要本机 Ark 凭据}
+      ARK_MODEL_ID: ${ARK_MODEL_ID:?需要本机 Ark 模型}
+      ARK_BASE_URL: ${ARK_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}
+      AGENT_FLOW_LOG_PATH: /tmp/agent-flow.log
+    ports: ["127.0.0.1:18080:8080"]
+    depends_on: [business, redis]
+volumes:
+  e2e_mongo:
+  e2e_redis:
