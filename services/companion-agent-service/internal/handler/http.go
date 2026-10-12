@@ -38,14 +38,17 @@ type HistoryResponse struct {
 	Messages       []HistoryMessage `json:"messages"`
 }
 type HTTP struct {
-	tracer         observability.TurnTracer
-	modelID        string
-	runner         *agent.Runner
-	conversations  *conversation.Repository
-	business       *businessclient.Client
-	locks          sync.Map
-	identitySecret string
+	tracer            observability.TurnTracer
+	modelID           string
+	runner            *agent.Runner
+	conversations     *conversation.Repository
+	business          *businessclient.Client
+	locks             sync.Map
+	identitySecret    string
+	knowledgeReadOnly bool
 }
+
+func (h *HTTP) WithKnowledgeReadOnly(enabled bool) *HTTP { h.knowledgeReadOnly = enabled; return h }
 
 func (h *HTTP) WithIdentitySecret(secret string) *HTTP { h.identitySecret = secret; return h }
 func (h *HTTP) verified(r *http.Request) (identity.Principal, string, bool) {
@@ -90,9 +93,11 @@ func (h *HTTP) ready(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not_ready", "dependency": "redis"})
 		return
 	}
-	if err := h.business.Ready(ctx); err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not_ready", "dependency": "business"})
-		return
+	if !h.knowledgeReadOnly {
+		if err := h.business.Ready(ctx); err != nil {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not_ready", "dependency": "business"})
+			return
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
@@ -167,6 +172,8 @@ func (h *HTTP) chat(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Accel-Buffering", "no")
 	requestID := newRequestID()
 	traceCtx, turn := h.tracer.StartAgentTurn(r.Context(), observability.TurnInfo{RequestID: requestID, UserID: request.UserID, ConversationID: request.ConversationID, Input: request.Message, ModelID: h.modelID})
+	w.Header().Set("X-Request-ID", requestID)
+	w.Header().Set("X-Trace-ID", observability.TraceID(traceCtx))
 	result := observability.TurnResult{Status: "error", ErrorCode: "TURN_INCOMPLETE"}
 	var finalText strings.Builder
 	defer func() {

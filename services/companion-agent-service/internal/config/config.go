@@ -21,6 +21,8 @@ type Config struct {
 	RedisDB                                                              int
 	ConversationTTL                                                      time.Duration
 	KnowledgeURL, KnowledgeJWTSecret                                     string
+	KnowledgeReadOnly                                                    bool
+	KnowledgePublicURL                                                   string
 }
 
 // Load 先从当前目录 .env 补充缺失值，再读取并校验配置。
@@ -57,6 +59,8 @@ func Load(requireLLM bool) (Config, error) {
 	cfg.Langfuse = loadLangfuse()
 	cfg.KnowledgeURL = env("KNOWLEDGE_API_URL", "http://127.0.0.1:8082")
 	cfg.KnowledgeJWTSecret = os.Getenv("KNOWLEDGE_JWT_SECRET")
+	cfg.KnowledgeReadOnly = strings.EqualFold(os.Getenv("AGENT_KNOWLEDGE_READ_ONLY"), "true")
+	cfg.KnowledgePublicURL = env("KNOWLEDGE_PUBLIC_URL", "http://127.0.0.1:8082")
 	return cfg, nil
 }
 

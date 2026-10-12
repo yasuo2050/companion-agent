@@ -44,7 +44,7 @@
       </form>
     </section>
   </main>
-  <script>
+  <script type="module">
     const form=document.querySelector('#form');
     const box=document.querySelector('#messages');
     const sendButton=document.querySelector('#send');
@@ -54,7 +54,12 @@
     const passwordInput=document.querySelector('#password');
     const loginButton=document.querySelector('#login');
     const conversationInput=document.querySelector('#conversation');
-    const knowledgeURL='http://127.0.0.1:8082';
+    const runtimeConfig=await fetch('/api/v1/runtime-config').then(r=>r.json());
+    const knowledgeURL=runtimeConfig.knowledge_url;
+    if(runtimeConfig.knowledge_read_only){
+      document.querySelector("h1").textContent="陪玩知识问答 · 只读";
+      document.querySelector("#message").placeholder="例如：恰好提前3小时取消，模拟规则可退多少？";
+    }
     let token=sessionStorage.getItem('companion_token')||'';
     loginButton.textContent=token?'已登录':'登录';
     tenantInput.addEventListener('change',()=>{userInput.value=tenantInput.value==='demo-a'?'10001':'b-10001';token='';sessionStorage.removeItem('companion_token');loginButton.textContent='登录'});

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
@@ -56,11 +57,15 @@ func main() {
 		slog.Error("Redis 连接失败", "error", err)
 		os.Exit(1)
 	}
-	runner := agent.NewRunner(chatModel, business, cfg.MaxIterations, cfg.ArkModelID).WithKnowledgeURL(cfg.KnowledgeURL)
+	runner := agent.NewRunner(chatModel, business, cfg.MaxIterations, cfg.ArkModelID).WithKnowledgeURL(cfg.KnowledgeURL).WithKnowledgeReadOnly(cfg.KnowledgeReadOnly)
 	tracer := observability.New(context.Background(), cfg.Langfuse, cfg.ArkAPIKey, cfg.RedisPassword)
-	api := handler.NewHTTP(runner, conversations, business).WithTracer(tracer, cfg.ArkModelID).WithIdentitySecret(cfg.KnowledgeJWTSecret)
+	api := handler.NewHTTP(runner, conversations, business).WithTracer(tracer, cfg.ArkModelID).WithIdentitySecret(cfg.KnowledgeJWTSecret).WithKnowledgeReadOnly(cfg.KnowledgeReadOnly)
 	mux := http.NewServeMux()
 	api.Register(mux)
+	mux.HandleFunc("GET /api/v1/runtime-config", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"knowledge_url": cfg.KnowledgePublicURL, "knowledge_read_only": cfg.KnowledgeReadOnly})
+	})
 	mux.Handle("GET /", http.FileServer(http.FS(webassets.Files)))
 	server := &http.Server{Addr: cfg.HTTPAddr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	go func() {

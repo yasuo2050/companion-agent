@@ -1,6 +1,14 @@
 # 陪玩下单 Agent 与知识问答
 
-RAG 知识平台、完整本机 Compose、演示身份和跨服务评测位于并列仓库 [`../companion-ai-knowledge-platform`](../companion-ai-knowledge-platform/README.md)。本仓库保留原有 Draft/Confirm 下单链路，并新增签名身份、知识检索工具、只读订单查询和 SSE 引用事件。
+RAG 知识平台、完整本机 Compose、演示身份和跨服务评测位于并列仓库 [companion-ai-knowledge-platform](https://github.com/yasuo2050/companion-ai-knowledge-platform)。本仓库保留原有 Draft/Confirm 下单链路，并新增签名身份、知识检索工具、只读订单查询和 SSE 引用事件。
+
+## Milvus M1 知识问答入口
+
+将两个仓库克隆到同一父目录，再按知识平台 [README](https://github.com/yasuo2050/companion-ai-knowledge-platform/blob/main/README.md) 配置并执行 `python3 scripts/m1.py up`。该入口启动 Milvus、Python RAG、知识服务、管理台、Redis 和本仓库 Agent，聊天页为 `http://127.0.0.1:18086`。
+
+M1 设置 `AGENT_KNOWLEDGE_READ_ONLY=true`，只注册 `search_knowledge`，不依赖业务服务启动，也不执行订单写入。每轮重新检索授权证据，旧助手答案和 ToolResult 不进入下一轮政策上下文；答案缓冲并通过引用编号检查后输出 SSE。演示登录密码来自知识平台本机 `.env.m1`。停止并保留数据：在知识平台执行 `python3 scripts/m1.py stop`。原始评测报告与密钥均留在本机。
+
+下方的业务服务与 Dify 启动说明属于原有 Draft/Confirm 演示链路；M1 采用上述独立入口。RAG 架构与面试资料见 [项目文档](https://github.com/yasuo2050/companion-ai-knowledge-platform/blob/main/docs/RAG项目与面试/README.md)。
 
 本仓库采用 Service-first Go Monorepo。仓库内有两个常驻后端服务、一个共享协议模块和一个 P1 实验模块：
 
@@ -47,7 +55,7 @@ Redis 保存完整 User / Assistant ToolCall / ToolResult / Assistant Final 消�
 
 ## 从干净环境启动
 
-完整演示请先按 [知识平台启动说明](../companion-ai-knowledge-platform/README.md)运行 `../companion-ai-knowledge-platform/scripts/start.sh`。该脚本启动 MongoDB、Redis、业务服务、Agent、知识服务、管理台与 Dify，并装载演示订单。聊天页使用知识平台 `.env` 中的演示登录密码；Agent 只使用令牌身份，请求体中的 `user_id` 不参与授权。
+完整演示请先按 [历史 Dify 启动说明](https://github.com/yasuo2050/companion-ai-knowledge-platform/blob/main/docs/Dify_历史部署与联调.md)运行 `../companion-ai-knowledge-platform/scripts/start.sh`。该脚本启动 MongoDB、Redis、业务服务、Agent、知识服务、管理台与 Dify，并装载演示订单。聊天页使用知识平台 `.env` 中的演示登录密码；Agent 只使用令牌身份，请求体中的 `user_id` 不参与授权。
 
 若单独启动本仓库，先确保知识服务已运行，再按下列步骤启动业务服务与 Agent；Agent 模块的 `.env` 还需填写与知识平台一致的 `KNOWLEDGE_JWT_SECRET` 和 `KNOWLEDGE_API_URL=http://127.0.0.1:8082`。
 
