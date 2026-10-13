@@ -13,11 +13,12 @@ import (
 )
 
 type readonlyModel struct {
-	steps      int
-	input      []*schema.Message
-	tools      []*schema.ToolInfo
-	answer     string
-	skipSearch bool
+	steps           int
+	input           []*schema.Message
+	tools           []*schema.ToolInfo
+	answer          string
+	skipSearch      bool
+	duplicateSearch bool
 }
 
 func (m *readonlyModel) WithTools(tools []*schema.ToolInfo) (model.ToolCallingChatModel, error) {
@@ -29,7 +30,11 @@ func (m *readonlyModel) Generate(_ context.Context, messages []*schema.Message, 
 	if m.steps == 1 {
 		m.input = messages
 		if !m.skipSearch {
-			return schema.AssistantMessage("", []schema.ToolCall{{ID: "search", Function: schema.FunctionCall{Name: "search_knowledge", Arguments: `{"question":"退款比例"}`}}}), nil
+			calls := []schema.ToolCall{{ID: "search", Function: schema.FunctionCall{Name: "search_knowledge", Arguments: `{"question":"退款比例"}`}}}
+			if m.duplicateSearch {
+				calls = append(calls, schema.ToolCall{ID: "duplicate", Function: schema.FunctionCall{Name: "search_knowledge", Arguments: `{"question":"退款比例"}`}})
+			}
+			return schema.AssistantMessage("", calls), nil
 		}
 	}
 	return schema.AssistantMessage(m.answer, nil), nil
@@ -43,11 +48,22 @@ func TestReadOnlyKnowledgeLoopNoWritesNoStaleEvidence(t *testing.T) {
 	for _, tt := range []struct {
 		name, status, answer, want string
 		skip                       bool
-	}{{"有来源", "ready", "模拟测试规则：退款90%[1]", "退款90%", false}, {"无引用", "ready", "退款100%", "未能提供可核验", false}, {"撤权", "no_accessible_sources", "退款100%", "没有可访问", false}, {"未检索", "ready", "退款100%[1]", "没有取得", true}} {
+	}{{"有来源", "ready", "模拟测试规则：退款90%[1]", "退款90%", false}, {"无引用", "ready", "退款100%", "未能提供可核验", false}, {"撤权", "no_accessible_sources", "退款100%", "没有可访问", false}, {"未检索", "ready", "退款100%[1]", "没有取得", true}, {"生成期间撤权", "ready", "退款90%[1]", "旧证据已失效", false}, {"复核不可用", "ready", "退款90%[1]", "无法复核来源", false}, {"并行重复检索", "ready", "退款90%[1]", "退款90%", false}} {
 		t.Run(tt.name, func(t *testing.T) {
 			calls := 0
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				calls++
+				if r.URL.Path == "/api/v1/knowledge/validate" {
+					if r.Header.Get("Authorization") != "Bearer unit-token" {
+						t.Error("复核缺少令牌")
+					}
+					if tt.name == "复核不可用" {
+						w.WriteHeader(503)
+						return
+					}
+					json.NewEncoder(w).Encode(map[string]bool{"valid": tt.name != "生成期间撤权"})
+					return
+				}
 				if r.URL.Path != "/api/v1/knowledge/retrieve" || r.Header.Get("Authorization") != "Bearer unit-token" {
 					t.Error("路径或令牌错误")
 				}
@@ -59,11 +75,15 @@ func TestReadOnlyKnowledgeLoopNoWritesNoStaleEvidence(t *testing.T) {
 				_ = json.NewEncoder(w).Encode(response)
 			}))
 			defer srv.Close()
-			m := &readonlyModel{answer: tt.answer, skipSearch: tt.skip}
+			m := &readonlyModel{answer: tt.answer, skipSearch: tt.skip, duplicateSearch: tt.name == "并行重复检索"}
 			runner := NewRunner(m, nil, 4, "unit").WithKnowledgeReadOnly(true).WithKnowledgeURL(srv.URL)
 			history := []*schema.Message{schema.UserMessage("以前退款多少"), schema.AssistantMessage("旧政策退款100%", nil), schema.ToolMessage("过期内部SOP", "stale"), schema.UserMessage("现在退款多少")}
 			var deltas strings.Builder
+			citations := 0
 			_, err := runner.Run(identity.WithToken(context.Background(), "unit-token"), "request", "10001", "conversation", history, func(e Event) {
+				if e.Type == "citations" {
+					citations += len(e.Citations)
+				}
 				if e.Type == "delta" {
 					deltas.WriteString(e.Content)
 				}
@@ -84,7 +104,18 @@ func TestReadOnlyKnowledgeLoopNoWritesNoStaleEvidence(t *testing.T) {
 					t.Fatal("旧证据进入本轮模型")
 				}
 			}
-			if !tt.skip && calls != 1 {
+			wantCalls := 1
+			if tt.status == "ready" && tt.name != "无引用" {
+				wantCalls = 2
+			}
+			if tt.name == "有来源" || tt.name == "并行重复检索" {
+				if citations != 1 {
+					t.Fatal("缺少最终引用")
+				}
+			} else if citations != 0 {
+				t.Fatal("无效答案暴露了引用")
+			}
+			if !tt.skip && calls != wantCalls {
 				t.Fatalf("检索次数 %d", calls)
 			}
 		})

@@ -2,11 +2,13 @@
 
 RAG 知识平台、完整本机 Compose、演示身份和跨服务评测位于并列仓库 [companion-ai-knowledge-platform](https://github.com/yasuo2050/companion-ai-knowledge-platform)。本仓库保留原有 Draft/Confirm 下单链路，并新增签名身份、知识检索工具、只读订单查询和 SSE 引用事件。
 
-## Milvus M1 知识问答入口
+## Milvus M1 / M2 知识问答入口
+
+2026-10-13：新增 `scope_revision`、生成后无模型来源复核、只读单轮外部检索预算。知识平台新增治理生命周期，联动说明与真实失败/用量边界见并列仓库 `M2_知识生命周期与调试手册.md`。
 
 将两个仓库克隆到同一父目录，再按知识平台 [README](https://github.com/yasuo2050/companion-ai-knowledge-platform/blob/main/README.md) 配置并执行 `python3 scripts/m1.py up`。该入口启动 Milvus、Python RAG、知识服务、管理台、Redis 和本仓库 Agent，聊天页为 `http://127.0.0.1:18086`。
 
-M1 设置 `AGENT_KNOWLEDGE_READ_ONLY=true`，只注册 `search_knowledge`，不依赖业务服务启动，也不执行订单写入。每轮重新检索授权证据，旧助手答案和 ToolResult 不进入下一轮政策上下文；答案缓冲并通过引用编号检查后输出 SSE。演示登录密码来自知识平台本机 `.env.m1`。停止并保留数据：在知识平台执行 `python3 scripts/m1.py stop`。原始评测报告与密钥均留在本机。
+M1 设置 `AGENT_KNOWLEDGE_READ_ONLY=true`，只注册 `search_knowledge`，不依赖业务服务启动，也不执行订单写入。每轮重新检索授权证据，旧助手答案和 ToolResult 不进入下一轮政策上下文；答案缓冲并通过引用编号检查、生成后当前来源复核，再输出 SSE。每轮外部知识检索最多一次，重复并行调用被硬预算拒绝，不重复向量化查询。演示登录密码来自知识平台本机 `.env.m1`。停止并保留数据：在知识平台执行 `python3 scripts/m1.py stop`。原始评测报告与密钥均留在本机。
 
 下方的业务服务与 Dify 启动说明属于原有 Draft/Confirm 演示链路；M1 采用上述独立入口。RAG 架构与面试资料见 [项目文档](https://github.com/yasuo2050/companion-ai-knowledge-platform/blob/main/docs/RAG项目与面试/README.md)。
 

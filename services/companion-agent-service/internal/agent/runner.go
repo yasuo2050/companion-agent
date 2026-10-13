@@ -86,6 +86,7 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 	var fixedPresentation atomic.Pointer[orderPresentation]
 	var verifiedKnowledge atomic.Bool
 	var citationCount atomic.Int64
+	var knowledgeCitations atomic.Pointer[[]toolbuilder.KnowledgeCitation]
 	observer := func(toolName, phase string, startedAt time.Time, input any) {
 		if phase == "started" {
 			emit(Event{Type: "status", ToolName: toolName})
@@ -115,7 +116,11 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 				}
 				if refs, ok := value["citations"].([]toolbuilder.KnowledgeCitation); ok {
 					citationCount.Store(int64(len(refs)))
-					emit(Event{Type: "citations", Citations: refs})
+					if r.knowledgeReadOnly {
+						knowledgeCitations.Store(&refs)
+					} else {
+						emit(Event{Type: "citations", Citations: refs})
+					}
 				}
 			}
 			return
@@ -206,6 +211,19 @@ func (r *Runner) Run(ctx context.Context, requestID, userID, conversationID stri
 			}
 			if r.knowledgeReadOnly && verifiedKnowledge.Load() && !groundedKnowledgeAnswer(message.Content, int(citationCount.Load())) {
 				message.Content = "本轮回答未能提供可核验的来源编号，请重新查询。"
+			} else if r.knowledgeReadOnly && verifiedKnowledge.Load() {
+				refs := knowledgeCitations.Load()
+				valid := false
+				if refs != nil {
+					valid, err = toolbuilder.ValidateKnowledgeEvidence(ctx, r.knowledgeURL, *refs)
+				}
+				if err != nil {
+					message.Content = "知识服务暂不可用，本轮无法复核来源，请稍后重试。"
+				} else if !valid {
+					message.Content = "本轮生成期间资料版本或权限已变更，旧证据已失效，请重新查询。"
+				} else {
+					emit(Event{Type: "citations", Citations: *refs})
+				}
 			}
 			if message.Content != "" && !streamedContent {
 				emit(Event{Type: "delta", Content: message.Content})
