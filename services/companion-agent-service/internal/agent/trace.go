@@ -34,6 +34,7 @@ type toolTracePayload struct {
 func logTurnTrace(requestID, conversationID, userID, modelID string, duration time.Duration, outputs []*schema.Message) {
 	var inputTokens, outputTokens, totalTokens, llmIterations int
 	var candidateIDs, arkRequestIDs, toolErrorCodes []string
+	var usageByCall []map[string]int
 	candidates := make([]tracedCandidate, 0)
 	recommendedID, draftID, orderID := "", "", ""
 	finalText := ""
@@ -55,6 +56,12 @@ func logTurnTrace(requestID, conversationID, userID, modelID string, duration ti
 				inputTokens += usage.PromptTokens
 				outputTokens += usage.CompletionTokens
 				totalTokens += usage.TotalTokens
+				usageByCall = append(usageByCall, map[string]int{
+					"iteration": llmIterations, "input_tokens": usage.PromptTokens,
+					"output_tokens": usage.CompletionTokens, "total_tokens": usage.TotalTokens,
+					"cached_input_tokens": usage.PromptTokenDetails.CachedTokens,
+					"reasoning_tokens":    usage.CompletionTokensDetails.ReasoningTokens,
+				})
 			}
 		}
 		if message.Role != schema.Tool || message.Content == "" {
@@ -90,6 +97,7 @@ func logTurnTrace(requestID, conversationID, userID, modelID string, duration ti
 		"candidate_ids", candidateIDs, "recommended_companion_id", recommendedID,
 		"draft_id", draftID, "order_id", orderID, "tool_error_codes", toolErrorCodes,
 		"input_tokens", inputTokens, "output_tokens", outputTokens, "total_tokens", totalTokens,
+		"usage_by_call", usageByCall,
 		"total_duration_ms", duration.Milliseconds())
 }
 
